@@ -1,0 +1,178 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 30% 6%;
+    --foreground: 210 20% 92%;
+
+    --card: 220 28% 8%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 220 28% 10%;
+    --popover-foreground: 210 20% 92%;
+
+    --primary: 213 52% 24%;
+    --primary-foreground: 210 20% 96%;
+
+    --secondary: 220 20% 14%;
+    --secondary-foreground: 210 20% 88%;
+
+    --muted: 220 18% 16%;
+    --muted-foreground: 215 15% 55%;
+
+    --accent: 174 84% 32%;
+    --accent-foreground: 170 80% 96%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 16% 16%;
+    --input: 220 16% 18%;
+    --ring: 174 84% 32%;
+
+    --radius: 0.5rem;
+  }
+
+  /* Light mode overrides (not default, but available) */
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 220 30% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 10%;
+
+    --primary: 213 52% 24%;
+    --primary-foreground: 210 20% 96%;
+
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 30% 10%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 174 84% 32%;
+    --accent-foreground: 170 80% 10%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 213 52% 24%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Custom scrollbar for dark mode */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+
+  /* Focus visible styles */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer utilities {
+  /* Score color utilities */
+  .score-high {
+    @apply text-emerald-400;
+  }
+
+  .score-medium {
+    @apply text-amber-400;
+  }
+
+  .score-low {
+    @apply text-red-400;
+  }
+
+  .score-bg-high {
+    @apply bg-emerald-400/10 text-emerald-400;
+  }
+
+  .score-bg-medium {
+    @apply bg-amber-400/10 text-amber-400;
+  }
+
+  .score-bg-low {
+    @apply bg-red-400/10 text-red-400;
+  }
+
+  /* Gradient text utility */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-accent-500 to-primary-400;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10;
+  }
+
+  /* Skeleton loading animation */
+  .skeleton {
+    @apply relative overflow-hidden bg-muted rounded;
+  }
+
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--muted-foreground) / 0.05),
+      transparent
+    );
+    animation: shimmer 2s infinite;
+  }
+
+  /* Hide scrollbar utility */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer components {
+  /* Reusable settings form input */
+  .settings-input {
+    @apply w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-white
+           placeholder:text-slate-600
+           focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500/50
+           disabled:cursor-not-allowed disabled:opacity-60
+           transition-colors;
+  }
+}
