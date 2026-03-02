@@ -6,7 +6,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
+from app.db.rls import set_tenant_context
+from app.db.session import get_db_with_tenant
 from app.models.user import User, UserRole
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 from app.services.auth import get_current_active_user, hash_password, require_role
@@ -25,7 +26,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
     summary="List users in the current tenant",
 )
 def list_users(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin", "team_lead"]))],
     include_inactive: bool = Query(
         default=False,
@@ -42,7 +43,11 @@ def list_users(
 
     Only admins and team leads can view the user list.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     query = db.query(User).filter(
+        # RLS enforces tenant isolation; filter kept as defense-in-depth
         User.tenant_id == current_user.tenant_id,
     )
 
@@ -77,7 +82,7 @@ def list_users(
 )
 def create_user(
     body: UserCreate,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> UserResponse:
     """Create a new user account within the current tenant.
@@ -85,10 +90,14 @@ def create_user(
     Only admins can create users.  Returns **409** if the email already
     exists within the tenant.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     # Check for duplicate email within the tenant
     existing = (
         db.query(User)
         .filter(
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             User.tenant_id == current_user.tenant_id,
             User.email == body.email,
         )
@@ -128,7 +137,7 @@ def create_user(
 def update_user(
     user_id: UUID,
     body: UserUpdate,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> UserResponse:
     """Update an existing user's profile, role, or active status.
@@ -136,10 +145,14 @@ def update_user(
     Only admins can update users.  Admins cannot deactivate their own
     account through this endpoint.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     user = (
         db.query(User)
         .filter(
             User.id == user_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             User.tenant_id == current_user.tenant_id,
         )
         .first()
@@ -185,7 +198,7 @@ def update_user(
 )
 def deactivate_user(
     user_id: UUID,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> None:
     """Soft-delete (deactivate) a user by setting ``is_active=False``.
@@ -193,10 +206,14 @@ def deactivate_user(
     The user's data is preserved but they can no longer authenticate.
     Only admins can deactivate users.  Self-deactivation is not allowed.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     user = (
         db.query(User)
         .filter(
             User.id == user_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             User.tenant_id == current_user.tenant_id,
         )
         .first()

@@ -6,7 +6,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
+from app.db.rls import set_tenant_context
+from app.db.session import get_db_with_tenant
 from app.models.intent import IntentSignal
 from app.models.user import User
 from app.schemas.intent import (
@@ -94,7 +95,7 @@ DEFAULT_INTENT_SIGNALS: List[dict] = [
     summary="List all intent signals for the current tenant",
 )
 def list_intent_signals(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     include_inactive: bool = False,
 ) -> List[IntentSignalResponse]:
@@ -103,7 +104,11 @@ def list_intent_signals(
     By default only active signals are returned.  Pass
     ``include_inactive=true`` to include soft-deleted entries.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     query = db.query(IntentSignal).filter(
+        # RLS enforces tenant isolation; filter kept as defense-in-depth
         IntentSignal.tenant_id == current_user.tenant_id,
     )
 
@@ -127,13 +132,16 @@ def list_intent_signals(
 )
 def create_intent_signal(
     body: IntentSignalCreate,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> IntentSignalResponse:
     """Create a new intent signal definition for the tenant.
 
     Only admins can create signals.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     signal = IntentSignal(
         tenant_id=current_user.tenant_id,
         name=body.name,
@@ -160,14 +168,18 @@ def create_intent_signal(
 def update_intent_signal(
     signal_id: UUID,
     body: IntentSignalUpdate,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> IntentSignalResponse:
     """Update an existing intent signal definition. Only admins can modify signals."""
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     signal = (
         db.query(IntentSignal)
         .filter(
             IntentSignal.id == signal_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             IntentSignal.tenant_id == current_user.tenant_id,
         )
         .first()
@@ -201,17 +213,21 @@ def update_intent_signal(
 )
 def delete_intent_signal(
     signal_id: UUID,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> None:
     """Soft-delete an intent signal by setting ``is_active=False``.
 
     Historical detection results are preserved. Only admins can delete signals.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     signal = (
         db.query(IntentSignal)
         .filter(
             IntentSignal.id == signal_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             IntentSignal.tenant_id == current_user.tenant_id,
         )
         .first()
@@ -239,7 +255,7 @@ def delete_intent_signal(
     summary="Seed default intent signals for the tenant",
 )
 def seed_defaults(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> List[IntentSignalResponse]:
     """Populate the tenant with the built-in set of 8 default intent signals.
@@ -247,9 +263,13 @@ def seed_defaults(
     Idempotent -- signals with matching names are skipped.
     Only admins can seed defaults.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     existing_names = {
         s.name
         for s in db.query(IntentSignal.name)
+        # RLS enforces tenant isolation; filter kept as defense-in-depth
         .filter(IntentSignal.tenant_id == current_user.tenant_id)
         .all()
     }

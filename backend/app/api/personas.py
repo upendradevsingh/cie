@@ -6,7 +6,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
+from app.db.rls import set_tenant_context
+from app.db.session import get_db_with_tenant
 from app.models.persona import PersonaType
 from app.models.user import User
 from app.schemas.persona import (
@@ -30,7 +31,7 @@ router = APIRouter(prefix="/persona-types", tags=["Persona Types"])
     summary="List all persona types for the current tenant",
 )
 def list_persona_types(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     include_inactive: bool = False,
 ) -> List[PersonaTypeResponse]:
@@ -39,7 +40,11 @@ def list_persona_types(
     By default only active types are returned.  Pass
     ``include_inactive=true`` to include soft-deleted entries.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     query = db.query(PersonaType).filter(
+        # RLS enforces tenant isolation; filter kept as defense-in-depth
         PersonaType.tenant_id == current_user.tenant_id,
     )
 
@@ -63,7 +68,7 @@ def list_persona_types(
 )
 def create_persona_type(
     body: PersonaTypeCreate,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> PersonaTypeResponse:
     """Create a new persona type for the tenant.
@@ -72,6 +77,9 @@ def create_persona_type(
     Decision Maker") and optionally includes a BANT profile template.
     Only admins can create persona types.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     persona_type = PersonaType(
         tenant_id=current_user.tenant_id,
         name=body.name,
@@ -99,14 +107,18 @@ def create_persona_type(
 def update_persona_type(
     persona_type_id: UUID,
     body: PersonaTypeUpdate,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> PersonaTypeResponse:
     """Update an existing persona type. Only admins can modify persona types."""
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     persona_type = (
         db.query(PersonaType)
         .filter(
             PersonaType.id == persona_type_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             PersonaType.tenant_id == current_user.tenant_id,
         )
         .first()
@@ -140,7 +152,7 @@ def update_persona_type(
 )
 def delete_persona_type(
     persona_type_id: UUID,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> None:
     """Soft-delete a persona type by setting ``is_active=False``.
@@ -148,10 +160,14 @@ def delete_persona_type(
     Historical persona classifications are preserved.
     Only admins can delete persona types.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     persona_type = (
         db.query(PersonaType)
         .filter(
             PersonaType.id == persona_type_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             PersonaType.tenant_id == current_user.tenant_id,
         )
         .first()

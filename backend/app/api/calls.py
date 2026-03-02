@@ -11,7 +11,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
-from app.db.session import get_db
+from app.db.rls import set_tenant_context
+from app.db.session import get_db, get_db_with_tenant
 from app.models.call import Call, CallStatus, IntentClassification
 from app.models.quality import CallQualityScore, QualityParameter
 from app.models.intent import CallIntentSignal, IntentSignal
@@ -180,7 +181,7 @@ async def upload_call(
     lead_phone: Optional[str] = Form(default=None, description="Lead phone number"),
     source: Optional[str] = Form(default=None, description="Lead source"),
     language: str = Form(default="en", description="Language code (en, hi, hinglish)"),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db_with_tenant),
     current_user: User = Depends(get_current_active_user),
 ) -> CallResponse:
     """Upload an audio recording and queue it for transcription + analysis.
@@ -190,6 +191,9 @@ async def upload_call(
     asynchronously.  The response contains the newly created call record
     with ``status=uploaded``.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     # Validate file type
     _validate_audio_extension(file.filename or "unknown.mp3")
 
@@ -215,6 +219,7 @@ async def upload_call(
             db.query(User)
             .filter(
                 User.id == parsed_agent_id,
+                # RLS enforces tenant isolation; filter kept as defense-in-depth
                 User.tenant_id == current_user.tenant_id,
             )
             .first()
@@ -255,7 +260,7 @@ async def upload_call(
     try:
         from app.tasks.call_processing import process_call  # noqa: F811
 
-        process_call.delay(str(call.id))
+        process_call.delay(str(call.id), tenant_id=str(current_user.tenant_id))
     except ImportError:
         # Tasks module may not be available yet during development
         pass
@@ -290,7 +295,7 @@ async def upload_call(
 )
 def webhook_call(
     body: CallWebhook,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> CallResponse:
     """Receive a recording URL and metadata from an external CRM or dialer.
@@ -298,6 +303,9 @@ def webhook_call(
     The recording URL is stored and a Celery task is dispatched to download,
     transcribe, and analyze the call.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     # Resolve agent_id: prefer explicit ID, fall back to email lookup
     resolved_agent_id: UUID | None = body.agent_id
     if resolved_agent_id is None and body.agent_email:
@@ -305,6 +313,7 @@ def webhook_call(
             db.query(User)
             .filter(
                 User.email == body.agent_email,
+                # RLS enforces tenant isolation; filter kept as defense-in-depth
                 User.tenant_id == current_user.tenant_id,
             )
             .first()
@@ -332,7 +341,7 @@ def webhook_call(
     try:
         from app.tasks.call_processing import process_call
 
-        process_call.delay(str(call.id))
+        process_call.delay(str(call.id), tenant_id=str(current_user.tenant_id))
     except ImportError:
         pass
 
@@ -364,7 +373,7 @@ def webhook_call(
     summary="List calls with filters and pagination",
 )
 def list_calls(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     agent_id: Optional[UUID] = Query(default=None, description="Filter by agent UUID"),
     date_from: Optional[datetime] = Query(default=None, description="Start date (inclusive)"),
@@ -381,9 +390,13 @@ def list_calls(
     Supports filtering by agent, date range, score range, intent
     classification, and processing status.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     query = (
         db.query(Call)
         .options(joinedload(Call.agent))
+        # RLS enforces tenant isolation; filter kept as defense-in-depth
         .filter(Call.tenant_id == current_user.tenant_id)
     )
 
@@ -464,12 +477,15 @@ def list_calls(
 )
 def get_call(
     call_id: UUID,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> CallResponse:
     """Return the full call detail including transcript, quality scores,
     lead intelligence, persona analysis, and action items.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     call = (
         db.query(Call)
         .options(
@@ -481,6 +497,7 @@ def get_call(
         )
         .filter(
             Call.id == call_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             Call.tenant_id == current_user.tenant_id,
         )
         .first()
@@ -507,7 +524,7 @@ def get_call(
 )
 def get_transcript(
     call_id: UUID,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> TranscriptResponse:
     """Return the speaker-labeled transcript for a specific call.
@@ -515,10 +532,14 @@ def get_transcript(
     Segments include speaker identification, start/end timestamps, and
     the transcribed text.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     call = (
         db.query(Call)
         .filter(
             Call.id == call_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             Call.tenant_id == current_user.tenant_id,
         )
         .first()
@@ -560,7 +581,7 @@ def get_transcript(
 def qa_override(
     call_id: UUID,
     body: QAOverride,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin", "team_lead"]))],
 ) -> CallResponse:
     """Allow admin or team lead to manually correct quality scores.
@@ -569,6 +590,9 @@ def qa_override(
     the corrected score (0--10), and a justification for the override.
     The overall weighted score is recalculated after applying all overrides.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     call = (
         db.query(Call)
         .options(
@@ -580,6 +604,7 @@ def qa_override(
         )
         .filter(
             Call.id == call_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             Call.tenant_id == current_user.tenant_id,
         )
         .first()
@@ -606,6 +631,7 @@ def qa_override(
             db.query(QualityParameter)
             .filter(
                 QualityParameter.id == override_item.parameter_id,
+                # RLS enforces tenant isolation; filter kept as defense-in-depth
                 QualityParameter.tenant_id == current_user.tenant_id,
             )
             .first()

@@ -7,7 +7,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
+from app.db.rls import set_tenant_context
+from app.db.session import get_db_with_tenant
 from app.models.report import ReportStatus, WeeklyReport
 from app.models.user import User
 from app.schemas.report import WeeklyReportRequest, WeeklyReportResponse
@@ -29,7 +30,7 @@ router = APIRouter(prefix="/reports", tags=["Reports"])
 )
 def trigger_weekly_report(
     body: WeeklyReportRequest,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin", "team_lead"]))],
 ) -> WeeklyReportResponse:
     """Create a weekly report request and dispatch it for async generation.
@@ -38,6 +39,9 @@ def trigger_weekly_report(
     A Celery task is dispatched to aggregate data and populate the report.
     Only admins and team leads can trigger report generation.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     week_start = body.week_start
     week_end = body.week_end or (week_start + timedelta(days=6))
 
@@ -45,6 +49,7 @@ def trigger_weekly_report(
     existing = (
         db.query(WeeklyReport)
         .filter(
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             WeeklyReport.tenant_id == current_user.tenant_id,
             WeeklyReport.week_start == week_start,
             WeeklyReport.week_end == week_end,
@@ -109,7 +114,7 @@ def trigger_weekly_report(
     summary="List generated weekly reports",
 )
 def list_weekly_reports(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     report_status: Optional[str] = Query(
         default=None,
@@ -123,7 +128,11 @@ def list_weekly_reports(
 
     Optionally filter by generation status.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     query = db.query(WeeklyReport).filter(
+        # RLS enforces tenant isolation; filter kept as defense-in-depth
         WeeklyReport.tenant_id == current_user.tenant_id,
     )
 
@@ -166,7 +175,7 @@ def list_weekly_reports(
 )
 def get_weekly_report(
     report_id: UUID,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> WeeklyReportResponse:
     """Return the full content of a specific weekly report.
@@ -174,10 +183,14 @@ def get_weekly_report(
     Returns **404** if the report does not exist or belongs to a different
     tenant.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     report = (
         db.query(WeeklyReport)
         .filter(
             WeeklyReport.id == report_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             WeeklyReport.tenant_id == current_user.tenant_id,
         )
         .first()

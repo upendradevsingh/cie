@@ -6,7 +6,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
+from app.db.rls import set_tenant_context
+from app.db.session import get_db_with_tenant
 from app.models.quality import QualityParameter
 from app.models.user import User
 from app.schemas.quality import (
@@ -203,7 +204,7 @@ DEFAULT_QUALITY_PARAMETERS: List[dict] = [
     summary="List all quality parameters for the current tenant",
 )
 def list_quality_parameters(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     include_inactive: bool = False,
 ) -> List[QualityParameterResponse]:
@@ -212,7 +213,11 @@ def list_quality_parameters(
     By default only active parameters are returned.  Pass
     ``include_inactive=true`` to include soft-deleted entries.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     query = db.query(QualityParameter).filter(
+        # RLS enforces tenant isolation; filter kept as defense-in-depth
         QualityParameter.tenant_id == current_user.tenant_id,
     )
 
@@ -236,13 +241,16 @@ def list_quality_parameters(
 )
 def create_quality_parameter(
     body: QualityParameterCreate,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> QualityParameterResponse:
     """Create a new quality scoring parameter for the tenant.
 
     Only admins can create parameters.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     param = QualityParameter(
         tenant_id=current_user.tenant_id,
         name=body.name,
@@ -272,14 +280,18 @@ def create_quality_parameter(
 def update_quality_parameter(
     param_id: UUID,
     body: QualityParameterUpdate,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> QualityParameterResponse:
     """Update an existing quality parameter. Only admins can modify parameters."""
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     param = (
         db.query(QualityParameter)
         .filter(
             QualityParameter.id == param_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             QualityParameter.tenant_id == current_user.tenant_id,
         )
         .first()
@@ -313,7 +325,7 @@ def update_quality_parameter(
 )
 def delete_quality_parameter(
     param_id: UUID,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> None:
     """Soft-delete a quality parameter by setting ``is_active=False``.
@@ -321,10 +333,14 @@ def delete_quality_parameter(
     The parameter and its historical scores are preserved for reporting.
     Only admins can delete parameters.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     param = (
         db.query(QualityParameter)
         .filter(
             QualityParameter.id == param_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             QualityParameter.tenant_id == current_user.tenant_id,
         )
         .first()
@@ -352,7 +368,7 @@ def delete_quality_parameter(
     summary="Seed default quality parameters for the tenant",
 )
 def seed_defaults(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> List[QualityParameterResponse]:
     """Populate the tenant with the built-in set of 15 default quality
@@ -361,9 +377,13 @@ def seed_defaults(
     This is idempotent -- existing parameters with matching names are
     skipped.  Only admins can seed defaults.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     existing_names = {
         p.name
         for p in db.query(QualityParameter.name)
+        # RLS enforces tenant isolation; filter kept as defense-in-depth
         .filter(QualityParameter.tenant_id == current_user.tenant_id)
         .all()
     }

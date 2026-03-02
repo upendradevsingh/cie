@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import case, cast, func, Float as SAFloat
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
+from app.db.rls import set_tenant_context
+from app.db.session import get_db_with_tenant
 from app.models.call import Call, CallStatus, IntentClassification
 from app.models.quality import CallQualityScore, QualityParameter
 from app.models.user import User
@@ -51,7 +52,7 @@ def _default_date_range(
     summary="Team-level analytics overview",
 )
 def team_analytics(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     date_from: Optional[datetime] = Query(default=None, description="Period start"),
     date_to: Optional[datetime] = Query(default=None, description="Period end"),
@@ -61,6 +62,9 @@ def team_analytics(
     Includes total calls, average scores, lead intent counts, calls by
     day, top agents, and score distribution.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     date_from, date_to = _default_date_range(date_from, date_to)
     tenant_id = current_user.tenant_id
 
@@ -68,6 +72,7 @@ def team_analytics(
     base = (
         db.query(Call)
         .filter(
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             Call.tenant_id == tenant_id,
             Call.created_at >= date_from,
             Call.created_at <= date_to,
@@ -189,7 +194,7 @@ def team_analytics(
 )
 def agent_analytics(
     agent_id: UUID,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     date_from: Optional[datetime] = Query(default=None, description="Period start"),
     date_to: Optional[datetime] = Query(default=None, description="Period end"),
@@ -199,6 +204,9 @@ def agent_analytics(
     Includes total calls, average scores, score trends over time, top
     performing parameters, and areas for improvement.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     date_from, date_to = _default_date_range(date_from, date_to)
 
     # Verify agent belongs to tenant
@@ -206,6 +214,7 @@ def agent_analytics(
         db.query(User)
         .filter(
             User.id == agent_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             User.tenant_id == current_user.tenant_id,
         )
         .first()
@@ -220,6 +229,7 @@ def agent_analytics(
     base = (
         db.query(Call)
         .filter(
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             Call.tenant_id == current_user.tenant_id,
             Call.agent_id == agent_id,
             Call.created_at >= date_from,
@@ -279,6 +289,7 @@ def agent_analytics(
             .join(CallQualityScore, CallQualityScore.parameter_id == QualityParameter.id)
             .filter(
                 CallQualityScore.call_id.in_(completed_call_ids),
+                # RLS enforces tenant isolation; filter kept as defense-in-depth
                 QualityParameter.tenant_id == current_user.tenant_id,
                 QualityParameter.is_active.is_(True),
             )
@@ -328,7 +339,7 @@ def agent_analytics(
     summary="Score trends over time",
 )
 def score_trends(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     date_from: Optional[datetime] = Query(default=None, description="Period start"),
     date_to: Optional[datetime] = Query(default=None, description="Period end"),
@@ -342,6 +353,9 @@ def score_trends(
     Each data point contains the date and the average overall quality
     score for that period.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     date_from, date_to = _default_date_range(date_from, date_to)
 
     trunc_unit = "week" if aggregation == "weekly" else "day"
@@ -352,6 +366,7 @@ def score_trends(
             func.avg(Call.overall_score).label("avg_score"),
         )
         .filter(
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             Call.tenant_id == current_user.tenant_id,
             Call.status == CallStatus.completed,
             Call.overall_score.isnot(None),
@@ -384,7 +399,7 @@ def score_trends(
     summary="Agent leaderboard ranked by quality score",
 )
 def leaderboard(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     date_from: Optional[datetime] = Query(default=None, description="Period start"),
     date_to: Optional[datetime] = Query(default=None, description="Period end"),
@@ -395,6 +410,9 @@ def leaderboard(
     Each entry includes total calls, average quality and intent scores,
     hot lead count, and rank position.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     date_from, date_to = _default_date_range(date_from, date_to)
 
     rows = (
@@ -413,6 +431,7 @@ def leaderboard(
         )
         .join(Call, Call.agent_id == User.id)
         .filter(
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             User.tenant_id == current_user.tenant_id,
             Call.tenant_id == current_user.tenant_id,
             Call.status == CallStatus.completed,

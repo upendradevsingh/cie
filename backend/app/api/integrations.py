@@ -9,7 +9,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
+from app.db.rls import set_tenant_context
+from app.db.session import get_db_with_tenant
 from app.models.integration import ApiKey, Integration
 from app.models.user import User
 from app.schemas.integration import (
@@ -58,7 +59,7 @@ def _generate_api_key() -> tuple[str, str]:
     summary="List all API keys for the current tenant",
 )
 def list_api_keys(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
     include_inactive: bool = Query(default=False, description="Include revoked keys"),
 ) -> List[ApiKeyListResponse]:
@@ -67,7 +68,11 @@ def list_api_keys(
     The raw key value is **never** returned in list views.
     Only admins can view API keys.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     query = db.query(ApiKey).filter(
+        # RLS enforces tenant isolation; filter kept as defense-in-depth
         ApiKey.tenant_id == current_user.tenant_id,
     )
 
@@ -91,7 +96,7 @@ def list_api_keys(
 )
 def create_api_key(
     body: ApiKeyCreate,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> ApiKeyResponse:
     """Generate a new API key for webhook authentication.
@@ -100,6 +105,9 @@ def create_api_key(
     Subsequent list/detail calls will not expose the key.
     Only admins can create API keys.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     plain_key, key_hash = _generate_api_key()
 
     api_key = ApiKey(
@@ -132,7 +140,7 @@ def create_api_key(
 )
 def revoke_api_key(
     key_id: UUID,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> None:
     """Revoke an API key by setting ``is_active=False``.
@@ -140,10 +148,14 @@ def revoke_api_key(
     The key hash is preserved for audit purposes.
     Only admins can revoke keys.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     api_key = (
         db.query(ApiKey)
         .filter(
             ApiKey.id == key_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             ApiKey.tenant_id == current_user.tenant_id,
         )
         .first()
@@ -175,7 +187,7 @@ def revoke_api_key(
     summary="List all integrations for the current tenant",
 )
 def list_integrations(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
     include_inactive: bool = Query(default=False, description="Include disabled integrations"),
 ) -> List[IntegrationResponse]:
@@ -183,7 +195,11 @@ def list_integrations(
 
     Only admins can view integrations.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     query = db.query(Integration).filter(
+        # RLS enforces tenant isolation; filter kept as defense-in-depth
         Integration.tenant_id == current_user.tenant_id,
     )
 
@@ -207,13 +223,16 @@ def list_integrations(
 )
 def create_integration(
     body: IntegrationCreate,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> IntegrationResponse:
     """Register a new CRM or webhook integration for the tenant.
 
     Only admins can create integrations.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     integration = Integration(
         tenant_id=current_user.tenant_id,
         name=body.name,
@@ -240,14 +259,18 @@ def create_integration(
 )
 def get_integration(
     integration_id: UUID,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> IntegrationResponse:
     """Return the details of a specific integration."""
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     integration = (
         db.query(Integration)
         .filter(
             Integration.id == integration_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             Integration.tenant_id == current_user.tenant_id,
         )
         .first()
@@ -275,14 +298,18 @@ def get_integration(
 def update_integration(
     integration_id: UUID,
     body: IntegrationUpdate,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> IntegrationResponse:
     """Update an existing integration. Only admins can modify integrations."""
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     integration = (
         db.query(Integration)
         .filter(
             Integration.id == integration_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             Integration.tenant_id == current_user.tenant_id,
         )
         .first()
@@ -316,17 +343,21 @@ def update_integration(
 )
 def delete_integration(
     integration_id: UUID,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_with_tenant)],
     current_user: Annotated[User, Depends(require_role(["admin"]))],
 ) -> None:
     """Disable an integration by setting ``is_active=False``.
 
     Only admins can delete integrations.
     """
+    # Set RLS tenant context for this transaction
+    set_tenant_context(db, current_user.tenant_id)
+
     integration = (
         db.query(Integration)
         .filter(
             Integration.id == integration_id,
+            # RLS enforces tenant isolation; filter kept as defense-in-depth
             Integration.tenant_id == current_user.tenant_id,
         )
         .first()
