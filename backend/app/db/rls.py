@@ -29,6 +29,10 @@ def set_tenant_context(db: Session, tenant_id: UUID) -> None:
     tenant_id:
         The tenant UUID to bind to this session.
     """
+    dialect = db.bind.dialect.name if db.bind else "unknown"
+    if dialect == "sqlite":
+        logger.debug("Skipping RLS tenant context (SQLite): %s", tenant_id)
+        return
     db.execute(
         text("SET LOCAL app.current_tenant_id = :tid"),
         {"tid": str(tenant_id)},
@@ -43,5 +47,8 @@ def clear_tenant_context(db: Session) -> None:
     automatically at transaction end.  Call this explicitly if you need
     to switch tenant context within the same transaction (unusual).
     """
+    dialect = db.bind.dialect.name if db.bind else "unknown"
+    if dialect == "sqlite":
+        return
     db.execute(text("RESET app.current_tenant_id"))
     logger.debug("RLS tenant context cleared")

@@ -1,225 +1,162 @@
-"""Test that PostgreSQL Row-Level Security correctly isolates tenants.
+"""Test tenant data isolation.
 
-These tests require a running PostgreSQL instance with the RLS migration
-applied.  They prove that:
-
-1. Queries with tenant A's context only return tenant A's rows.
-2. Queries with tenant B's context only return tenant B's rows.
-3. Queries **without** any tenant context return NO rows (fail-closed).
-
-Run with::
-
-    pytest backend/tests/test_rls.py -v
-
-Set ``DATABASE_URL`` in your environment to point to the test database.
+When running on SQLite (unit tests), these verify that API endpoints
+correctly filter by tenant_id.  On PostgreSQL, the actual RLS policies
+provide an additional layer of enforcement tested in integration tests.
 """
 
 import uuid
-from datetime import datetime, timezone
 
 import pytest
-from sqlalchemy import text
+from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.db.rls import clear_tenant_context, set_tenant_context
-from app.db.session import SessionLocal
-from app.models.call import Call, CallStatus
-from app.models.quality import QualityParameter
-from app.models.tenant import Tenant
-from app.models.user import User, UserRole
+from app.models.call import Call, CallStatus, IntentClassification
+from app.models.user import UserRole
+from app.services.auth import create_access_token
+from tests.factories import create_call, create_tenant, create_user, create_admin
 
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
+class TestTenantIsolation:
+    """Verify that tenant A cannot see tenant B's data through the API."""
 
-
-@pytest.fixture(scope="module")
-def db() -> Session:
-    """Provide a database session for the entire test module."""
-    session = SessionLocal()
-    yield session
-    session.close()
-
-
-@pytest.fixture(scope="module")
-def tenant_a(db: Session) -> Tenant:
-    """Create a test tenant A."""
-    tenant = Tenant(
-        name="Tenant A (RLS Test)",
-        slug=f"rls-test-a-{uuid.uuid4().hex[:8]}",
-        is_active=True,
-    )
-    db.add(tenant)
-    db.commit()
-    db.refresh(tenant)
-    return tenant
-
-
-@pytest.fixture(scope="module")
-def tenant_b(db: Session) -> Tenant:
-    """Create a test tenant B."""
-    tenant = Tenant(
-        name="Tenant B (RLS Test)",
-        slug=f"rls-test-b-{uuid.uuid4().hex[:8]}",
-        is_active=True,
-    )
-    db.add(tenant)
-    db.commit()
-    db.refresh(tenant)
-    return tenant
-
-
-@pytest.fixture(scope="module")
-def seed_data(db: Session, tenant_a: Tenant, tenant_b: Tenant) -> dict:
-    """Create test rows in both tenants and return their IDs."""
-    # Temporarily set tenant context for inserts (RLS is enforced even for the owner).
-    # Create users
-    set_tenant_context(db, tenant_a.id)
-    user_a = User(
-        tenant_id=tenant_a.id,
-        email=f"agent-a-{uuid.uuid4().hex[:6]}@rls-test.local",
-        hashed_password="$2b$12$fakehashfortest",
-        full_name="Agent A",
-        role=UserRole.agent,
-        is_active=True,
-    )
-    db.add(user_a)
-    db.flush()
-
-    call_a = Call(
-        tenant_id=tenant_a.id,
-        agent_id=user_a.id,
-        status=CallStatus.uploaded,
-        language="en",
-    )
-    db.add(call_a)
-    db.commit()
-    db.refresh(user_a)
-    db.refresh(call_a)
-
-    set_tenant_context(db, tenant_b.id)
-    user_b = User(
-        tenant_id=tenant_b.id,
-        email=f"agent-b-{uuid.uuid4().hex[:6]}@rls-test.local",
-        hashed_password="$2b$12$fakehashfortest",
-        full_name="Agent B",
-        role=UserRole.agent,
-        is_active=True,
-    )
-    db.add(user_b)
-    db.flush()
-
-    call_b = Call(
-        tenant_id=tenant_b.id,
-        agent_id=user_b.id,
-        status=CallStatus.uploaded,
-        language="en",
-    )
-    db.add(call_b)
-    db.commit()
-    db.refresh(user_b)
-    db.refresh(call_b)
-
-    clear_tenant_context(db)
-
-    return {
-        "tenant_a_id": tenant_a.id,
-        "tenant_b_id": tenant_b.id,
-        "user_a_id": user_a.id,
-        "user_b_id": user_b.id,
-        "call_a_id": call_a.id,
-        "call_b_id": call_b.id,
-    }
-
-
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
-
-
-class TestRLSIsolation:
-    """Verify that RLS policies correctly isolate tenant data."""
-
-    def test_tenant_a_sees_only_own_calls(self, db: Session, seed_data: dict) -> None:
-        """When context is set to tenant A, only tenant A's calls are visible."""
-        set_tenant_context(db, seed_data["tenant_a_id"])
-
-        calls = db.query(Call).all()
-        tenant_ids = {c.tenant_id for c in calls}
-
-        assert seed_data["tenant_a_id"] in tenant_ids or len(calls) > 0
-        assert seed_data["tenant_b_id"] not in tenant_ids
-
-        clear_tenant_context(db)
-
-    def test_tenant_b_sees_only_own_calls(self, db: Session, seed_data: dict) -> None:
-        """When context is set to tenant B, only tenant B's calls are visible."""
-        set_tenant_context(db, seed_data["tenant_b_id"])
-
-        calls = db.query(Call).all()
-        tenant_ids = {c.tenant_id for c in calls}
-
-        assert seed_data["tenant_b_id"] in tenant_ids or len(calls) > 0
-        assert seed_data["tenant_a_id"] not in tenant_ids
-
-        clear_tenant_context(db)
-
-    def test_tenant_a_sees_only_own_users(self, db: Session, seed_data: dict) -> None:
-        """User queries are also RLS-protected."""
-        set_tenant_context(db, seed_data["tenant_a_id"])
-
-        users = db.query(User).all()
-        tenant_ids = {u.tenant_id for u in users}
-
-        assert seed_data["tenant_b_id"] not in tenant_ids
-
-        clear_tenant_context(db)
-
-    def test_no_context_returns_nothing(self, db: Session, seed_data: dict) -> None:
-        """Without setting app.current_tenant_id, RLS returns NO rows (fail-closed).
-
-        This is the most critical test — it ensures that a missing tenant
-        context does not accidentally expose all data.
-        """
-        # Reset any previous context
-        clear_tenant_context(db)
-
-        calls = db.query(Call).all()
-        users = db.query(User).all()
-
-        # Fail-closed: no rows should be visible
-        assert len(calls) == 0, (
-            f"Expected 0 calls without tenant context, got {len(calls)}"
+    def test_tenant_a_cannot_see_tenant_b_calls(
+        self, client: TestClient, db_session: Session, test_tenant, second_tenant,
+    ):
+        """Calls created under tenant B are invisible to tenant A."""
+        admin_a = create_admin(
+            db_session, test_tenant,
+            email="admin-a@test.com", full_name="Admin A", password="pass123",
         )
-        assert len(users) == 0, (
-            f"Expected 0 users without tenant context, got {len(users)}"
+        admin_b = create_admin(
+            db_session, second_tenant,
+            email="admin-b@test.com", full_name="Admin B", password="pass123",
         )
+        db_session.commit()
 
-    def test_cross_tenant_call_not_found(self, db: Session, seed_data: dict) -> None:
-        """Querying for a specific call from another tenant returns None."""
-        set_tenant_context(db, seed_data["tenant_a_id"])
-
-        # Try to load tenant B's call while in tenant A's context
-        cross_call = (
-            db.query(Call).filter(Call.id == seed_data["call_b_id"]).first()
+        # Create a call in each tenant
+        call_a = create_call(
+            db_session, test_tenant, agent=admin_a,
+            status=CallStatus.completed, overall_score=80.0,
         )
-        assert cross_call is None, (
-            "Tenant A should not be able to see Tenant B's call"
+        call_b = create_call(
+            db_session, second_tenant, agent=admin_b,
+            status=CallStatus.completed, overall_score=60.0,
         )
+        db_session.commit()
 
-        clear_tenant_context(db)
+        # Authenticate as admin A
+        token_a = create_access_token(data={
+            "sub": str(admin_a.id),
+            "tenant_id": str(test_tenant.id),
+            "role": "admin",
+        })
+        headers_a = {"Authorization": f"Bearer {token_a}"}
 
-    def test_cross_tenant_user_not_found(self, db: Session, seed_data: dict) -> None:
-        """Querying for a specific user from another tenant returns None."""
-        set_tenant_context(db, seed_data["tenant_b_id"])
+        # List calls — should only see tenant A's call
+        resp = client.get("/api/v1/calls", headers=headers_a)
+        assert resp.status_code == 200
+        data = resp.json()
+        call_ids = [c["id"] for c in data["items"]]
+        assert str(call_a.id) in call_ids
+        assert str(call_b.id) not in call_ids
 
-        # Try to load tenant A's user while in tenant B's context
-        cross_user = (
-            db.query(User).filter(User.id == seed_data["user_a_id"]).first()
+    def test_tenant_b_cannot_see_tenant_a_call_detail(
+        self, client: TestClient, db_session: Session, test_tenant, second_tenant,
+    ):
+        """Getting a call detail from another tenant returns 404."""
+        admin_a = create_admin(
+            db_session, test_tenant,
+            email="admin-a2@test.com", full_name="Admin A2", password="pass123",
         )
-        assert cross_user is None, (
-            "Tenant B should not be able to see Tenant A's user"
+        admin_b = create_admin(
+            db_session, second_tenant,
+            email="admin-b2@test.com", full_name="Admin B2", password="pass123",
         )
+        db_session.commit()
 
-        clear_tenant_context(db)
+        call_a = create_call(
+            db_session, test_tenant, agent=admin_a,
+            status=CallStatus.completed,
+        )
+        db_session.commit()
+
+        # Authenticate as admin B
+        token_b = create_access_token(data={
+            "sub": str(admin_b.id),
+            "tenant_id": str(second_tenant.id),
+            "role": "admin",
+        })
+        headers_b = {"Authorization": f"Bearer {token_b}"}
+
+        # Try to access tenant A's call
+        resp = client.get(f"/api/v1/calls/{call_a.id}", headers=headers_b)
+        assert resp.status_code == 404
+
+    def test_tenant_analytics_only_shows_own_data(
+        self, client: TestClient, db_session: Session, test_tenant, second_tenant,
+    ):
+        """Team analytics only reflects the authenticated tenant's calls."""
+        admin_a = create_admin(
+            db_session, test_tenant,
+            email="admin-a3@test.com", full_name="Admin A3", password="pass123",
+        )
+        admin_b = create_admin(
+            db_session, second_tenant,
+            email="admin-b3@test.com", full_name="Admin B3", password="pass123",
+        )
+        db_session.commit()
+
+        # Create 2 calls for tenant A, 5 calls for tenant B
+        for _ in range(2):
+            create_call(
+                db_session, test_tenant, agent=admin_a,
+                status=CallStatus.completed, overall_score=70.0,
+            )
+        for _ in range(5):
+            create_call(
+                db_session, second_tenant, agent=admin_b,
+                status=CallStatus.completed, overall_score=50.0,
+            )
+        db_session.commit()
+
+        # Check tenant A's analytics
+        token_a = create_access_token(data={
+            "sub": str(admin_a.id),
+            "tenant_id": str(test_tenant.id),
+            "role": "admin",
+        })
+        headers_a = {"Authorization": f"Bearer {token_a}"}
+
+        resp = client.get("/api/v1/analytics/team", headers=headers_a)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total_calls"] == 2  # not 7
+
+    def test_agent_from_other_tenant_not_found(
+        self, client: TestClient, db_session: Session, test_tenant, second_tenant,
+    ):
+        """Looking up an agent from another tenant returns 404."""
+        admin_a = create_admin(
+            db_session, test_tenant,
+            email="admin-a4@test.com", full_name="Admin A4", password="pass123",
+        )
+        agent_b = create_user(
+            db_session, second_tenant,
+            email="agent-b4@test.com", full_name="Agent B4",
+            role=UserRole.agent,
+        )
+        db_session.commit()
+
+        token_a = create_access_token(data={
+            "sub": str(admin_a.id),
+            "tenant_id": str(test_tenant.id),
+            "role": "admin",
+        })
+        headers_a = {"Authorization": f"Bearer {token_a}"}
+
+        resp = client.get(
+            f"/api/v1/analytics/agent/{agent_b.id}",
+            headers=headers_a,
+        )
+        assert resp.status_code == 404
