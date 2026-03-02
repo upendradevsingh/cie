@@ -11,6 +11,8 @@ from app.models.action_item import ActionItem, ActionUrgency
 from app.models.report import ReportStatus, WeeklyReport
 from app.models.integration import ApiKey, Integration
 from app.models.prompt_template import PromptTemplate
+from app.models.lead import Lead
+from app.models.data_capture import DataCaptureQuestion
 
 __all__ = [
     # Base
@@ -45,4 +47,8 @@ __all__ = [
     "ApiKey",
     # Prompt templates
     "PromptTemplate",
+    # Lead management
+    "Lead",
+    # Data capture
+    "DataCaptureQuestion",
 ]

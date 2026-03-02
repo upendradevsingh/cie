@@ -17,6 +17,8 @@ from app.api.reports import router as reports_router
 from app.api.users import agents_router, router as users_router
 from app.api.integrations import router as integrations_router
 from app.api.prompt_templates import router as prompt_templates_router
+from app.api.leads import router as leads_router
+from app.api.data_capture import router as data_capture_router
 
 api_router = APIRouter()
 
@@ -44,3 +46,7 @@ api_router.include_router(integrations_router)
 
 # Prompt templates
 api_router.include_router(prompt_templates_router)
+
+# Lead management and data capture
+api_router.include_router(leads_router)
+api_router.include_router(data_capture_router)
