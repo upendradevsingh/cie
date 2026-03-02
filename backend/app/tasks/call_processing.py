@@ -20,6 +20,7 @@ import httpx
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.db.rls import set_tenant_context
 from app.db.session import SessionLocal
 from app.models.action_item import ActionItem, ActionUrgency
 from app.models.call import Call, CallStatus, IntentClassification
@@ -95,7 +96,7 @@ def _run_async(coro: Any) -> Any:
     default_retry_delay=60,
     acks_late=True,
 )
-def process_call(self: Any, call_id: str) -> Dict[str, Any]:
+def process_call(self: Any, call_id: str, tenant_id: str | None = None) -> Dict[str, Any]:
     """Process a call through the full transcription and analysis pipeline.
 
     This task:
@@ -111,6 +112,11 @@ def process_call(self: Any, call_id: str) -> Dict[str, Any]:
     ----------
     call_id:
         UUID string of the :class:`Call` record to process.
+    tenant_id:
+        UUID string of the tenant that owns the call.  When provided the
+        RLS tenant context is set immediately so all subsequent queries
+        are scoped to this tenant.  When ``None`` the call is loaded
+        first (without RLS) and the tenant_id is read from the record.
 
     Returns
     -------
@@ -121,10 +127,19 @@ def process_call(self: Any, call_id: str) -> Dict[str, Any]:
 
     try:
         # ── 1. Load call ──────────────────────────────────────────────────
+        # If tenant_id was provided, set RLS context before the first query.
+        # Otherwise, load the call first to discover the tenant_id, then set it.
+        if tenant_id is not None:
+            set_tenant_context(db, uuid.UUID(tenant_id))
+
         call = _load_call(db, call_id)
         if call is None:
             logger.error("Call %s not found in database", call_id)
             return {"status": "error", "message": f"Call {call_id} not found"}
+
+        # If tenant_id was not passed, set RLS context now using the call's tenant.
+        if tenant_id is None:
+            set_tenant_context(db, call.tenant_id)
 
         logger.info(
             "Processing call %s (tenant=%s, status=%s)",

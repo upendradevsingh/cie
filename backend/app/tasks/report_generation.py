@@ -24,6 +24,7 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
+from app.db.rls import set_tenant_context
 from app.db.session import SessionLocal
 from app.models.report import ReportStatus, WeeklyReport
 from app.services.reports.weekly_report import WeeklyReportGenerator
@@ -96,6 +97,9 @@ def generate_weekly_report(
         tid = uuid.UUID(tenant_id)
         ws = date.fromisoformat(week_start)
         we = date.fromisoformat(week_end)
+
+        # Set RLS tenant context for all queries in this task
+        set_tenant_context(db, tid)
 
         if ws > we:
             raise ValueError(
