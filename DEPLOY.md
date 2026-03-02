@@ -12,6 +12,15 @@ chmod +x infra/deploy-to-ec2.sh
 ./infra/deploy-to-ec2.sh <EC2_IP> ~/.ssh/your-key.pem
 ```
 
+**Tip:** Create a local `deploy.sh` for quick deployments (already in `.gitignore`):
+
+```bash
+#!/usr/bin/env bash
+./infra/deploy-to-ec2.sh YOUR_EC2_IP ~/.ssh/your-key.pem
+```
+
+Then just run `./deploy.sh` for one-command deploys without typing IPs/paths.
+
 That's it! The script will:
 - ✅ Pull `feat/enhanced-analysis` branch
 - ✅ Run database migrations (including `sales_audit_keywords` column)
