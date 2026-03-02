@@ -40,6 +40,9 @@ pnpm-debug.log*
 .env.production
 .env.staging
 
+# ── Deployment scripts with hardcoded IPs/credentials ──────────────────────
+deploy.sh
+
 # ── IDE / Editor ────────────────────────────────────────────────────────────
 .vscode/
 .idea/
