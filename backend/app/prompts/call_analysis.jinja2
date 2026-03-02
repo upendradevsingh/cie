@@ -59,6 +59,82 @@ If no persona types are configured, use "Unclassified" as the persona type.
 {% endif %}
 
 ═══════════════════════════════════════════════════════════════════
+ESCALATION & RISK DETECTION
+═══════════════════════════════════════════════════════════════════
+
+Identify any escalation-related keywords or phrases in the conversation.
+Look for: legal threats, complaint mentions, fraud/scam references,
+regulatory body mentions, supervisor/manager requests, cancellation
+threats, social media threats, formal grievance language.
+
+For each detected keyword/phrase:
+- keyword: the exact word/phrase
+- context: brief sentence showing how it was used
+- severity: "high" (legal/regulatory), "medium" (complaints/escalation), "low" (mild frustration)
+
+═══════════════════════════════════════════════════════════════════
+SENTIMENT & TONE ANALYSIS
+═══════════════════════════════════════════════════════════════════
+
+Identify sentiment-indicating keywords from both speakers.
+Categorize as positive, negative, or neutral.
+Determine overall call sentiment: "positive", "negative", "mixed", or "neutral".
+
+═══════════════════════════════════════════════════════════════════
+CALL TOPICS & TAGS
+═══════════════════════════════════════════════════════════════════
+
+Auto-categorize the call with relevant topic tags (1-5 tags).
+Examples: "pricing_discussion", "product_demo", "complaint_resolution",
+"onboarding", "renewal", "upsell", "competitor_comparison",
+"technical_support", "billing_inquiry", "feature_request"
+
+═══════════════════════════════════════════════════════════════════
+SALES AUDIT KEYWORDS
+═══════════════════════════════════════════════════════════════════
+
+Extract keywords and phrases from the conversation into 8 audit-relevant categories. For each keyword found, provide:
+- keyword: the exact word or short phrase
+- context: a single sentence showing how it was used in context
+- severity: "high", "medium", or "low"
+
+Categories:
+
+1. compliance_violations — Words/phrases suggesting regulatory or policy violations.
+   Examples: "guaranteed", "I'll waive that fee", "no contract needed", "promised"
+   Severity guide: high = definite violation language, medium = borderline/risky, low = minor concern
+
+2. missed_opportunities — Cues where the agent failed to explore or capitalize on a customer need.
+   Examples: "also looking for", "we also need", "another issue we have"
+   Severity guide: high = clear upsell/cross-sell missed, medium = unexplored need, low = minor gap
+
+3. pricing_discounts — Any mention of pricing, cost concerns, discounts, or special offers.
+   Examples: "too expensive", "special offer", "50% off", "competitor is cheaper"
+   Severity guide: high = unauthorized discount given, medium = price negotiation, low = general pricing mention
+
+4. competitor_mentions — References to competitors, alternative solutions, or comparisons.
+   Examples: "Competitor X", "currently using", "better than", "switching from"
+   Severity guide: high = active competitor evaluation, medium = comparison mention, low = passing reference
+
+5. customer_pain_points — Customer frustrations, challenges, or problems expressed.
+   Examples: "struggling with", "takes too long", "keeps breaking", "frustrated"
+   Severity guide: high = critical pain driving urgency, medium = significant concern, low = minor inconvenience
+
+6. commitment_closing — Language indicating readiness to buy or close the deal.
+   Examples: "let's go ahead", "send the contract", "I'm ready to sign", "when can we start"
+   Severity guide: high = definite commitment, medium = strong buying signal, low = tentative interest
+
+7. objection_handling — Customer objections or hesitations raised during the call.
+   Examples: "not sure about", "concerned about", "need to think", "too risky"
+   Severity guide: high = deal-blocking objection, medium = significant hesitation, low = minor concern
+
+8. negative_reactions — Expressions of dissatisfaction, disappointment, or anger.
+   Examples: "disappointed", "unacceptable", "not happy", "worst experience"
+   Severity guide: high = strong negative emotion/escalation risk, medium = clear dissatisfaction, low = mild displeasure
+
+Return empty arrays for categories where nothing was detected.
+
+═══════════════════════════════════════════════════════════════════
 CALL TRANSCRIPT
 ═══════════════════════════════════════════════════════════════════
 
@@ -133,7 +209,42 @@ Return a single JSON object with EXACTLY this structure:
     "requirements": ["Real-time dashboards", "API integration", "Multi-location support"]
   },
   "follow_up_urgency": "this_week",
-  "call_summary": "Sales call with John Smith, VP of Sales at Acme Corp. Discussed pain points with their current Competitor X solution, particularly around reporting and support. Customer showed interest in our advanced analytics features and requested a demo. Budget is allocated but timeline is Q2."
+  "call_summary": "Sales call with John Smith, VP of Sales at Acme Corp. Discussed pain points with their current Competitor X solution, particularly around reporting and support. Customer showed interest in our advanced analytics features and requested a demo. Budget is allocated but timeline is Q2.",
+  "escalation_keywords": [
+    {
+      "keyword": "legal action",
+      "context": "Customer mentioned they would consider legal action if the issue is not resolved.",
+      "severity": "high"
+    }
+  ],
+  "sentiment": {
+    "positive_keywords": ["satisfied", "great", "impressed"],
+    "negative_keywords": ["frustrated", "disappointed"],
+    "overall_sentiment": "mixed"
+  },
+  "call_tags": ["pricing_discussion", "competitor_comparison", "demo_request"],
+  "sales_audit_keywords": {
+    "compliance_violations": [
+      {
+        "keyword": "guaranteed",
+        "context": "Agent said 'I guaranteed the price won't change' which may be a compliance concern.",
+        "severity": "high"
+      }
+    ],
+    "missed_opportunities": [],
+    "pricing_discounts": [
+      {
+        "keyword": "50% off",
+        "context": "Customer asked about a 50% off deal they saw online.",
+        "severity": "medium"
+      }
+    ],
+    "competitor_mentions": [],
+    "customer_pain_points": [],
+    "commitment_closing": [],
+    "objection_handling": [],
+    "negative_reactions": []
+  }
 }
 
 ═══════════════════════════════════════════════════════════════════
@@ -156,3 +267,7 @@ CRITICAL RULES
 14. follow_up_urgency must be one of: "immediate", "this_week", "next_week", "nurture"
 15. intent_classification must be one of: "hot", "warm", "cold"
 16. Return ONLY the JSON object. No markdown, no code fences, no commentary before or after.
+17. escalation_keywords must be an array. Each item must have "keyword", "context", and "severity" (one of "high", "medium", "low"). Return empty array [] if no escalation keywords detected.
+18. sentiment must be an object with "positive_keywords" (array of strings), "negative_keywords" (array of strings), and "overall_sentiment" (one of "positive", "negative", "mixed", "neutral").
+19. call_tags must be an array of 1-5 lowercase snake_case topic tags. Choose from: "pricing_discussion", "product_demo", "complaint_resolution", "onboarding", "renewal", "upsell", "competitor_comparison", "technical_support", "billing_inquiry", "feature_request", "follow_up", "cold_call", "negotiation", "contract_discussion", "cancellation", or other relevant tags.
+20. sales_audit_keywords must be an object with exactly 8 keys: "compliance_violations", "missed_opportunities", "pricing_discounts", "competitor_mentions", "customer_pain_points", "commitment_closing", "objection_handling", "negative_reactions". Each key maps to an array of objects with "keyword" (string), "context" (string, one sentence), and "severity" (one of "high", "medium", "low"). Use empty arrays [] for categories with no detected keywords.

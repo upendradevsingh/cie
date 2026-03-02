@@ -24,6 +24,20 @@ import {
   Edit3,
   Save,
   X,
+  AlertTriangle,
+  Tag,
+  SmilePlus,
+  Frown,
+  Search,
+  ChevronDown,
+  ShieldAlert,
+  TrendingDown,
+  DollarSign,
+  Users,
+  Flame,
+  Handshake,
+  MessageCircleWarning,
+  ThumbsDown,
 } from "lucide-react";
 import {
   RadarChart,
@@ -55,13 +69,16 @@ import type {
   IntentClassification,
   FollowUpUrgency,
   Objection,
+  SentimentData,
+  SalesAuditKeywords,
+  SalesAuditKeyword,
 } from "@/lib/types";
 
 // ────────────────────────────────────────────────────────────────────
 // Call Detail Page
 // ────────────────────────────────────────────────────────────────────
 
-type TabId = "transcript" | "quality" | "lead-intel" | "action-items";
+type TabId = "transcript" | "keywords" | "quality" | "lead-intel" | "action-items";
 
 export default function CallDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -112,8 +129,16 @@ export default function CallDetailPage() {
 
   const isFailed = call.status === "failed";
 
-  const tabs: Array<{ id: TabId; label: string; icon: React.ReactNode }> = [
+  const totalAuditKeywords = call.sales_audit_keywords
+    ? Object.values(call.sales_audit_keywords).reduce(
+        (sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0),
+        0,
+      )
+    : 0;
+
+  const tabs: Array<{ id: TabId; label: string; icon: React.ReactNode; badge?: number }> = [
     { id: "transcript", label: "Transcript", icon: <MessageSquare className="h-4 w-4" /> },
+    { id: "keywords", label: "Keywords", icon: <Search className="h-4 w-4" />, badge: totalAuditKeywords },
     { id: "quality", label: "Quality", icon: <BarChart3 className="h-4 w-4" /> },
     { id: "lead-intel", label: "Lead Intel", icon: <Target className="h-4 w-4" /> },
     { id: "action-items", label: "Action Items", icon: <ListChecks className="h-4 w-4" /> },
@@ -164,14 +189,66 @@ export default function CallDetailPage() {
             </div>
           </div>
 
-          {/* Overall score gauge */}
+          {/* Overall score gauge + sentiment */}
           {call.status === "completed" && (
-            <div className="flex-shrink-0">
+            <div className="flex flex-shrink-0 items-center gap-3">
+              {call.sentiment?.overall_sentiment && call.sentiment.overall_sentiment !== "neutral" && (
+                <SentimentBadge sentiment={call.sentiment.overall_sentiment} />
+              )}
               <ScoreGauge score={call.overall_score} size="lg" />
             </div>
           )}
         </div>
+
+        {/* Call tags */}
+        {call.status === "completed" && call.call_tags?.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <Tag className="h-3.5 w-3.5 text-slate-500" />
+            {call.call_tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-md bg-primary-600/15 px-2 py-0.5 text-2xs font-medium text-primary-300"
+              >
+                {tag.replace(/_/g, " ")}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Escalation alert banner */}
+      {call.status === "completed" && call.escalation_keywords?.length > 0 && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-red-400">
+            <AlertTriangle className="h-4 w-4" />
+            Escalation Alert — {call.escalation_keywords.length} keyword{call.escalation_keywords.length > 1 ? "s" : ""} detected
+          </div>
+          <div className="mt-2 space-y-1.5">
+            {call.escalation_keywords.map((ek, i) => (
+              <div key={i} className="flex items-start gap-2 text-sm">
+                <span
+                  className={cn(
+                    "mt-0.5 rounded px-1.5 py-0.5 text-2xs font-medium",
+                    ek.severity === "high"
+                      ? "bg-red-500/15 text-red-400"
+                      : ek.severity === "medium"
+                        ? "bg-amber-500/15 text-amber-400"
+                        : "bg-slate-700 text-slate-400",
+                  )}
+                >
+                  {ek.severity}
+                </span>
+                <div>
+                  <span className="font-medium text-white">{ek.keyword}</span>
+                  {ek.context && (
+                    <span className="ml-1 text-slate-400">— {ek.context}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Processing state */}
       {isProcessing && (
@@ -227,6 +304,11 @@ export default function CallDetailPage() {
               >
                 {tab.icon}
                 {tab.label}
+                {tab.badge != null && tab.badge > 0 && (
+                  <span className="ml-1 rounded-full bg-slate-700 px-1.5 py-0.5 text-2xs font-semibold text-slate-300">
+                    {tab.badge}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -236,11 +318,15 @@ export default function CallDetailPage() {
             {activeTab === "transcript" && (
               <TranscriptTab segments={call.transcript} />
             )}
+            {activeTab === "keywords" && (
+              <KeywordsTab keywords={call.sales_audit_keywords} />
+            )}
             {activeTab === "quality" && (
               <QualityTab
                 callId={call.id}
                 scores={call.quality_scores}
                 overallScore={call.overall_score}
+                sentiment={call.sentiment}
               />
             )}
             {activeTab === "lead-intel" && (
@@ -363,6 +449,228 @@ function TranscriptTab({ segments }: { segments: TranscriptSegment[] }) {
 }
 
 // ────────────────────────────────────────────────────────────────────
+// Keywords Tab
+// ────────────────────────────────────────────────────────────────────
+
+const AUDIT_CATEGORIES: Array<{
+  key: keyof SalesAuditKeywords;
+  label: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  icon: React.ReactNode;
+}> = [
+  {
+    key: "compliance_violations",
+    label: "Compliance Violations",
+    color: "text-red-400",
+    bgColor: "bg-red-500/10",
+    borderColor: "border-red-500/20",
+    icon: <ShieldAlert className="h-4 w-4 text-red-400" />,
+  },
+  {
+    key: "missed_opportunities",
+    label: "Missed Opportunities",
+    color: "text-amber-400",
+    bgColor: "bg-amber-500/10",
+    borderColor: "border-amber-500/20",
+    icon: <TrendingDown className="h-4 w-4 text-amber-400" />,
+  },
+  {
+    key: "pricing_discounts",
+    label: "Pricing & Discounts",
+    color: "text-blue-400",
+    bgColor: "bg-blue-500/10",
+    borderColor: "border-blue-500/20",
+    icon: <DollarSign className="h-4 w-4 text-blue-400" />,
+  },
+  {
+    key: "competitor_mentions",
+    label: "Competitor Mentions",
+    color: "text-purple-400",
+    bgColor: "bg-purple-500/10",
+    borderColor: "border-purple-500/20",
+    icon: <Users className="h-4 w-4 text-purple-400" />,
+  },
+  {
+    key: "customer_pain_points",
+    label: "Customer Pain Points",
+    color: "text-orange-400",
+    bgColor: "bg-orange-500/10",
+    borderColor: "border-orange-500/20",
+    icon: <Flame className="h-4 w-4 text-orange-400" />,
+  },
+  {
+    key: "commitment_closing",
+    label: "Commitment & Closing",
+    color: "text-emerald-400",
+    bgColor: "bg-emerald-500/10",
+    borderColor: "border-emerald-500/20",
+    icon: <Handshake className="h-4 w-4 text-emerald-400" />,
+  },
+  {
+    key: "objection_handling",
+    label: "Objection Handling",
+    color: "text-cyan-400",
+    bgColor: "bg-cyan-500/10",
+    borderColor: "border-cyan-500/20",
+    icon: <MessageCircleWarning className="h-4 w-4 text-cyan-400" />,
+  },
+  {
+    key: "negative_reactions",
+    label: "Negative Reactions",
+    color: "text-rose-400",
+    bgColor: "bg-rose-500/10",
+    borderColor: "border-rose-500/20",
+    icon: <ThumbsDown className="h-4 w-4 text-rose-400" />,
+  },
+];
+
+function KeywordsTab({ keywords }: { keywords: SalesAuditKeywords | null }) {
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    () => {
+      // Auto-expand categories that have keywords
+      const expanded = new Set<string>();
+      if (keywords) {
+        for (const cat of AUDIT_CATEGORIES) {
+          const items = keywords[cat.key];
+          if (Array.isArray(items) && items.length > 0) {
+            expanded.add(cat.key);
+          }
+        }
+      }
+      return expanded;
+    },
+  );
+
+  const toggleCategory = (key: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  if (!keywords) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 py-16 text-slate-500">
+        <Search className="h-8 w-8" />
+        <p className="text-sm">No audit keywords available for this call.</p>
+      </div>
+    );
+  }
+
+  const totalCount = Object.values(keywords).reduce(
+    (sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0),
+    0,
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-400">
+          {totalCount} keyword{totalCount !== 1 ? "s" : ""} detected across {AUDIT_CATEGORIES.filter((c) => {
+            const items = keywords[c.key];
+            return Array.isArray(items) && items.length > 0;
+          }).length} categories
+        </p>
+      </div>
+
+      {AUDIT_CATEGORIES.map((cat) => {
+        const items: SalesAuditKeyword[] = keywords[cat.key] ?? [];
+        const isExpanded = expandedCategories.has(cat.key);
+        const count = items.length;
+
+        return (
+          <div
+            key={cat.key}
+            className={cn(
+              "rounded-xl border transition-colors",
+              count > 0
+                ? `${cat.borderColor} bg-slate-850/60`
+                : "border-slate-800/50 bg-slate-850/30",
+            )}
+          >
+            {/* Category header */}
+            <button
+              onClick={() => toggleCategory(cat.key)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left"
+            >
+              {cat.icon}
+              <span className={cn("flex-1 text-sm font-medium", count > 0 ? cat.color : "text-slate-500")}>
+                {cat.label}
+              </span>
+              {count > 0 ? (
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-2xs font-semibold",
+                    cat.bgColor,
+                    cat.color,
+                  )}
+                >
+                  {count}
+                </span>
+              ) : (
+                <span className="text-2xs text-slate-600">None detected</span>
+              )}
+              {count > 0 && (
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 text-slate-500 transition-transform",
+                    isExpanded && "rotate-180",
+                  )}
+                />
+              )}
+            </button>
+
+            {/* Keywords list */}
+            {isExpanded && count > 0 && (
+              <div className="border-t border-slate-800/50 px-4 py-3 space-y-2">
+                {items.map((kw, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 rounded-lg bg-slate-800/30 px-3 py-2.5"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white">
+                          {kw.keyword}
+                        </span>
+                        <span
+                          className={cn(
+                            "rounded px-1.5 py-0.5 text-2xs font-medium",
+                            kw.severity === "high"
+                              ? "bg-red-500/15 text-red-400"
+                              : kw.severity === "medium"
+                                ? "bg-amber-500/15 text-amber-400"
+                                : "bg-slate-700 text-slate-400",
+                          )}
+                        >
+                          {kw.severity}
+                        </span>
+                      </div>
+                      {kw.context && (
+                        <p className="mt-1 text-xs text-slate-400 leading-relaxed">
+                          {kw.context}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────
 // Quality Tab
 // ────────────────────────────────────────────────────────────────────
 
@@ -370,10 +678,12 @@ function QualityTab({
   callId,
   scores,
   overallScore,
+  sentiment,
 }: {
   callId: string;
   scores: QualityScore[];
   overallScore: number;
+  sentiment?: SentimentData;
 }) {
   const canOverride = useRequireRole(["admin", "team_lead"]);
   const queryClient = useQueryClient();
@@ -622,6 +932,57 @@ function QualityTab({
           </div>
         </div>
       ))}
+
+      {/* Sentiment Breakdown */}
+      {sentiment && (sentiment.positive_keywords.length > 0 || sentiment.negative_keywords.length > 0) && (
+        <div className="rounded-xl border border-slate-800 bg-slate-850/60 p-5">
+          <h3 className="mb-3 text-sm font-semibold text-white">
+            Sentiment Analysis
+          </h3>
+          <div className="flex items-center gap-3 mb-4">
+            <SentimentBadge sentiment={sentiment.overall_sentiment} />
+            <span className="text-sm text-slate-400">Overall call sentiment</span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {sentiment.positive_keywords.length > 0 && (
+              <div>
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+                  <SmilePlus className="h-3.5 w-3.5" />
+                  Positive Keywords
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {sentiment.positive_keywords.map((kw: string, i: number) => (
+                    <span
+                      key={i}
+                      className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-2xs text-emerald-400"
+                    >
+                      {kw}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {sentiment.negative_keywords.length > 0 && (
+              <div>
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-red-400">
+                  <Frown className="h-3.5 w-3.5" />
+                  Negative Keywords
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {sentiment.negative_keywords.map((kw: string, i: number) => (
+                    <span
+                      key={i}
+                      className="rounded-md bg-red-500/10 px-2 py-0.5 text-2xs text-red-400"
+                    >
+                      {kw}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1180,6 +1541,26 @@ function UrgencyBadge({ urgency }: { urgency: FollowUpUrgency }) {
       )}
     >
       {labels[urgency]}
+    </span>
+  );
+}
+
+function SentimentBadge({ sentiment }: { sentiment: string }) {
+  const styles: Record<string, string> = {
+    positive: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    negative: "bg-red-500/10 text-red-400 border-red-500/20",
+    mixed: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+    neutral: "bg-slate-500/10 text-slate-400 border-slate-500/20",
+  };
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize",
+        styles[sentiment] ?? styles.neutral,
+      )}
+    >
+      {sentiment}
     </span>
   );
 }

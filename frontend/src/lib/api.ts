@@ -39,6 +39,7 @@ import type {
   WeeklyReportListItem,
   GenerateWeeklyReportRequest,
   AgentSummary,
+  PromptTemplate,
 } from "@/lib/types";
 
 // ── Axios instance ─────────────────────────────────────────────────
@@ -490,6 +491,36 @@ export async function generateWeeklyReport(
 ): Promise<WeeklyReportListItem> {
   const res = await api.post("/reports/weekly", data);
   return _mapReportListItem(res.data);
+}
+
+// ── Prompt Templates ─────────────────────────────────────────────
+
+export async function getPromptTemplates(): Promise<PromptTemplate[]> {
+  const res = await api.get<PromptTemplate[]>("/prompt-templates");
+  return res.data;
+}
+
+export async function getPromptTemplate(id: string): Promise<PromptTemplate> {
+  const res = await api.get<PromptTemplate>(`/prompt-templates/${id}`);
+  return res.data;
+}
+
+export async function updatePromptTemplate(
+  id: string,
+  data: { description?: string; template_content?: string },
+): Promise<PromptTemplate> {
+  const res = await api.put<PromptTemplate>(`/prompt-templates/${id}`, data);
+  return res.data;
+}
+
+export async function seedPromptTemplates(): Promise<PromptTemplate[]> {
+  const res = await api.post<PromptTemplate[]>("/prompt-templates/seed");
+  return res.data;
+}
+
+export async function resetPromptTemplate(id: string): Promise<PromptTemplate> {
+  const res = await api.post<PromptTemplate>(`/prompt-templates/${id}/reset`);
+  return res.data;
 }
 
 export default api;

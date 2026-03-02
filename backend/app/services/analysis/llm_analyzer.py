@@ -121,6 +121,25 @@ class AnalysisResult:
     key_data_points: Dict[str, Any]
     follow_up_urgency: str
     call_summary: str
+    escalation_keywords: List[Dict[str, str]] = field(default_factory=list)
+    sentiment: Dict[str, Any] = field(default_factory=lambda: {
+        "positive_keywords": [],
+        "negative_keywords": [],
+        "overall_sentiment": "neutral",
+    })
+    call_tags: List[str] = field(default_factory=list)
+    sales_audit_keywords: Dict[str, List[Dict[str, str]]] = field(
+        default_factory=lambda: {
+            "compliance_violations": [],
+            "missed_opportunities": [],
+            "pricing_discounts": [],
+            "competitor_mentions": [],
+            "customer_pain_points": [],
+            "commitment_closing": [],
+            "objection_handling": [],
+            "negative_reactions": [],
+        }
+    )
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialise the result to a plain dictionary for JSON storage."""
@@ -165,6 +184,10 @@ class AnalysisResult:
             "key_data_points": self.key_data_points,
             "follow_up_urgency": self.follow_up_urgency,
             "call_summary": self.call_summary,
+            "escalation_keywords": self.escalation_keywords,
+            "sentiment": self.sentiment,
+            "call_tags": self.call_tags,
+            "sales_audit_keywords": self.sales_audit_keywords,
         }
 
 
@@ -254,6 +277,8 @@ class CallAnalyzer:
         quality_parameters: List[QualityParameterInput],
         intent_signals: List[IntentSignalInput],
         persona_types: List[PersonaTypeInput],
+        db: Optional[Any] = None,
+        tenant_id: Optional[Any] = None,
     ) -> AnalysisResult:
         """Analyse a transcript and return structured results.
 
@@ -267,6 +292,10 @@ class CallAnalyzer:
             Intent signals to detect within the conversation.
         persona_types:
             Persona categories for lead classification.
+        db:
+            Optional database session for loading DB-stored prompt templates.
+        tenant_id:
+            Optional tenant UUID for loading tenant-specific prompts.
 
         Returns
         -------
@@ -285,6 +314,8 @@ class CallAnalyzer:
             quality_parameters=quality_parameters,
             intent_signals=intent_signals,
             persona_types=persona_types,
+            db=db,
+            tenant_id=tenant_id,
         )
 
         # 2. Call the LLM
@@ -303,8 +334,46 @@ class CallAnalyzer:
         quality_parameters: List[QualityParameterInput],
         intent_signals: List[IntentSignalInput],
         persona_types: List[PersonaTypeInput],
+        db: Optional[Any] = None,
+        tenant_id: Optional[Any] = None,
     ) -> str:
-        """Render the Jinja2 analysis prompt with the given context."""
+        """Render the Jinja2 analysis prompt with the given context.
+
+        If ``db`` and ``tenant_id`` are provided, checks the database for a
+        tenant-specific prompt template first.  Falls back to the file-based
+        Jinja2 template if no DB template is found.
+        """
+        if db is not None and tenant_id is not None:
+            try:
+                from app.models.prompt_template import PromptTemplate
+
+                template_record = (
+                    db.query(PromptTemplate)
+                    .filter(
+                        PromptTemplate.tenant_id == tenant_id,
+                        PromptTemplate.name == "call_analysis",
+                        PromptTemplate.is_active.is_(True),
+                    )
+                    .first()
+                )
+                if template_record:
+                    env = Environment(autoescape=False, keep_trailing_newline=True)
+                    template = env.from_string(template_record.template_content)
+                    return template.render(
+                        transcript=transcript,
+                        quality_parameters=quality_parameters,
+                        intent_signals=intent_signals,
+                        persona_types=persona_types,
+                    )
+            except Exception:
+                logger.warning(
+                    "Failed to load DB prompt template for tenant %s, "
+                    "falling back to file",
+                    tenant_id,
+                    exc_info=True,
+                )
+
+        # Fall back to file-based template
         template = _load_template("call_analysis.jinja2")
         return template.render(
             transcript=transcript,
@@ -452,6 +521,75 @@ class CallAnalyzer:
         if follow_up_urgency not in valid_urgencies:
             follow_up_urgency = "this_week"
 
+        # Escalation keywords
+        raw_escalation = data.get("escalation_keywords", [])
+        escalation_keywords: List[Dict[str, str]] = []
+        if isinstance(raw_escalation, list):
+            for ek in raw_escalation:
+                if isinstance(ek, dict):
+                    severity = ek.get("severity", "low").lower()
+                    if severity not in ("high", "medium", "low"):
+                        severity = "low"
+                    escalation_keywords.append({
+                        "keyword": ek.get("keyword", ""),
+                        "context": ek.get("context", ""),
+                        "severity": severity,
+                    })
+
+        # Sentiment
+        raw_sentiment = data.get("sentiment", {})
+        if isinstance(raw_sentiment, dict):
+            overall_sentiment = raw_sentiment.get("overall_sentiment", "neutral").lower()
+            if overall_sentiment not in ("positive", "negative", "mixed", "neutral"):
+                overall_sentiment = "neutral"
+            sentiment: Dict[str, Any] = {
+                "positive_keywords": raw_sentiment.get("positive_keywords", []),
+                "negative_keywords": raw_sentiment.get("negative_keywords", []),
+                "overall_sentiment": overall_sentiment,
+            }
+        else:
+            sentiment = {
+                "positive_keywords": [],
+                "negative_keywords": [],
+                "overall_sentiment": "neutral",
+            }
+
+        # Call tags
+        raw_tags = data.get("call_tags", [])
+        call_tags: List[str] = []
+        if isinstance(raw_tags, list):
+            call_tags = [str(t) for t in raw_tags if isinstance(t, str)]
+
+        # Sales audit keywords
+        _AUDIT_CATEGORIES = {
+            "compliance_violations",
+            "missed_opportunities",
+            "pricing_discounts",
+            "competitor_mentions",
+            "customer_pain_points",
+            "commitment_closing",
+            "objection_handling",
+            "negative_reactions",
+        }
+        raw_audit = data.get("sales_audit_keywords", {})
+        sales_audit_keywords: Dict[str, List[Dict[str, str]]] = {
+            cat: [] for cat in _AUDIT_CATEGORIES
+        }
+        if isinstance(raw_audit, dict):
+            for cat in _AUDIT_CATEGORIES:
+                raw_list = raw_audit.get(cat, [])
+                if isinstance(raw_list, list):
+                    for item in raw_list:
+                        if isinstance(item, dict):
+                            sev = item.get("severity", "low").lower()
+                            if sev not in ("high", "medium", "low"):
+                                sev = "low"
+                            sales_audit_keywords[cat].append({
+                                "keyword": item.get("keyword", ""),
+                                "context": item.get("context", ""),
+                                "severity": sev,
+                            })
+
         return AnalysisResult(
             quality_scores=quality_scores,
             overall_score=float(data.get("overall_score", 0)),
@@ -465,6 +603,10 @@ class CallAnalyzer:
             key_data_points=data.get("key_data_points", {}),
             follow_up_urgency=follow_up_urgency,
             call_summary=data.get("call_summary", ""),
+            escalation_keywords=escalation_keywords,
+            sentiment=sentiment,
+            call_tags=call_tags,
+            sales_audit_keywords=sales_audit_keywords,
         )
 
 

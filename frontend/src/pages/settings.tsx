@@ -18,6 +18,8 @@ import {
   Target,
   Shield,
   Save,
+  FileText,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, useRequireRole } from "@/hooks/use-auth";
@@ -46,6 +48,10 @@ import {
   getUsers,
   createUser,
   updateUser,
+  getPromptTemplates,
+  updatePromptTemplate,
+  seedPromptTemplates,
+  resetPromptTemplate,
 } from "@/lib/api";
 import type {
   QualityParameter,
@@ -67,6 +73,7 @@ import type {
   UpdateUserRequest,
   UserRole,
   IntegrationType,
+  PromptTemplate,
 } from "@/lib/types";
 
 // ────────────────────────────────────────────────────────────────────
@@ -77,6 +84,7 @@ type SettingsTab =
   | "quality"
   | "intent"
   | "personas"
+  | "prompts"
   | "integrations"
   | "users";
 
@@ -89,6 +97,7 @@ const TAB_CONFIG: Array<{
   { id: "quality", label: "Quality Parameters", icon: <BarChart3 className="h-4 w-4" />, adminOnly: false },
   { id: "intent", label: "Intent Signals", icon: <Target className="h-4 w-4" />, adminOnly: false },
   { id: "personas", label: "Persona Types", icon: <Shield className="h-4 w-4" />, adminOnly: false },
+  { id: "prompts", label: "Prompt Templates", icon: <FileText className="h-4 w-4" />, adminOnly: true },
   { id: "integrations", label: "Integrations", icon: <Plug className="h-4 w-4" />, adminOnly: false },
   { id: "users", label: "Users", icon: <Users className="h-4 w-4" />, adminOnly: true },
 ];
@@ -139,6 +148,7 @@ export default function SettingsPage() {
         {activeTab === "quality" && <QualityParametersTab />}
         {activeTab === "intent" && <IntentSignalsTab />}
         {activeTab === "personas" && <PersonaTypesTab />}
+        {activeTab === "prompts" && isAdmin && <PromptTemplatesTab />}
         {activeTab === "integrations" && <IntegrationsTab />}
         {activeTab === "users" && isAdmin && <UsersTab />}
       </div>
@@ -929,6 +939,229 @@ function PersonaTypeDialog({
         <DialogActions onClose={onClose} isPending={createMut.isPending || updateMut.isPending} isEdit={isEdit} />
       </form>
     </DialogShell>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Prompt Templates Tab
+// ────────────────────────────────────────────────────────────────────
+
+function PromptTemplatesTab() {
+  const queryClient = useQueryClient();
+  const [editItem, setEditItem] = useState<PromptTemplate | null>(null);
+
+  const { data: templates, isLoading } = useQuery({
+    queryKey: ["prompt-templates"],
+    queryFn: getPromptTemplates,
+  });
+
+  const seedMutation = useMutation({
+    mutationFn: seedPromptTemplates,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["prompt-templates"] }),
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-400">
+          Manage LLM prompt templates used for call analysis. Edit prompts to
+          customize how calls are analyzed.
+        </p>
+        <button
+          onClick={() => seedMutation.mutate()}
+          disabled={seedMutation.isPending}
+          className="flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-colors disabled:opacity-60"
+        >
+          {seedMutation.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5" />
+          )}
+          Seed Defaults
+        </button>
+      </div>
+
+      {isLoading ? (
+        <SettingsTableSkeleton />
+      ) : !templates || templates.length === 0 ? (
+        <EmptyState message="No prompt templates configured yet. Click 'Seed Defaults' to initialize the default call analysis prompt." />
+      ) : (
+        <div className="space-y-4">
+          {templates.map((tpl) => (
+            <div
+              key={tpl.id}
+              className="rounded-xl border border-slate-800 bg-slate-850/60 p-5 transition-colors hover:border-slate-700"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-accent-400" />
+                    <h4 className="text-sm font-semibold text-white">
+                      {tpl.name}
+                    </h4>
+                    <span className="rounded bg-slate-800 px-1.5 py-0.5 text-2xs text-slate-500">
+                      v{tpl.version}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {tpl.description || "No description"}
+                  </p>
+                </div>
+                <ActiveDot active={tpl.is_active} />
+              </div>
+              <pre className="mt-3 max-h-40 overflow-auto rounded-lg bg-slate-900/80 p-3 text-xs text-slate-400 font-mono leading-relaxed">
+                {tpl.template_content.slice(0, 500)}
+                {tpl.template_content.length > 500 ? "\n..." : ""}
+              </pre>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => setEditItem(tpl)}
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {editItem && (
+        <PromptTemplateEditor
+          template={editItem}
+          onClose={() => setEditItem(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function PromptTemplateEditor({
+  template,
+  onClose,
+}: {
+  template: PromptTemplate;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [content, setContent] = useState(template.template_content);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const updateMut = useMutation({
+    mutationFn: (data: { template_content: string }) =>
+      updatePromptTemplate(template.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["prompt-templates"] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    },
+    onError: () => setFormError("Failed to save prompt template."),
+  });
+
+  const resetMut = useMutation({
+    mutationFn: () => resetPromptTemplate(template.id),
+    onSuccess: (data) => {
+      setContent(data.template_content);
+      queryClient.invalidateQueries({ queryKey: ["prompt-templates"] });
+    },
+    onError: () => setFormError("Failed to reset template."),
+  });
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!content.trim()) {
+      setFormError("Template content cannot be empty.");
+      return;
+    }
+    setFormError(null);
+    updateMut.mutate({ template_content: content });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="mx-4 w-full max-w-4xl animate-fade-in rounded-xl border border-slate-800 bg-slate-850 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+          <div>
+            <h2 className="text-lg font-semibold text-white">
+              Edit: {template.name}
+            </h2>
+            <p className="text-xs text-slate-500">
+              Version {template.version} &middot; Saving will auto-increment
+              version
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="px-6 py-5">
+          {formError && <FormError message={formError} />}
+          {saved && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
+              <CheckCircle2 className="h-4 w-4" />
+              Saved successfully (v{template.version + 1})
+            </div>
+          )}
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="w-full rounded-lg border border-slate-700 bg-slate-900 p-4 font-mono text-sm text-slate-300 placeholder:text-slate-600 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500/50 transition-colors resize-y"
+            rows={20}
+            spellCheck={false}
+          />
+          <div className="mt-4 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  confirm(
+                    "Reset to the default file-based template? This will overwrite your changes.",
+                  )
+                ) {
+                  resetMut.mutate();
+                }
+              }}
+              disabled={resetMut.isPending}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-colors disabled:opacity-60"
+            >
+              {resetMut.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RotateCcw className="h-3.5 w-3.5" />
+              )}
+              Reset to Default
+            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={updateMut.isPending}
+                className="flex items-center gap-2 rounded-lg bg-accent-500 px-4 py-2 text-sm font-medium text-white hover:bg-accent-600 disabled:opacity-60 transition-colors"
+              >
+                {updateMut.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Save Template
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 
