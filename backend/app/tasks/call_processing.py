@@ -476,6 +476,8 @@ def _analyze_call(
             quality_parameters=qp_inputs,
             intent_signals=is_inputs,
             persona_types=pt_inputs,
+            db=db,
+            tenant_id=call.tenant_id,
         )
     )
 
@@ -596,6 +598,13 @@ def _save_analysis_results(
         IntentClassification.cold,
     )
     call.analysis = result.to_dict()
+
+    # ── Enhanced analysis fields ──────────────────────────────────────
+    call.escalation_keywords = result.escalation_keywords
+    call.sentiment_keywords = result.sentiment
+    call.call_tags = result.call_tags
+    call.sales_audit_keywords = result.sales_audit_keywords
+
     call.updated_at = datetime.now(timezone.utc)
 
     db.commit()

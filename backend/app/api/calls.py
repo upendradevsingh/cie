@@ -29,6 +29,7 @@ from app.schemas.call import (
     CallUpload,
     CallWebhook,
     CustomFieldItem,
+    EscalationKeyword,
     IntentSignalResponse,
     LeadIntelligenceResponse,
     ObjectionResponse,
@@ -36,6 +37,9 @@ from app.schemas.call import (
     PersonaDataResponse,
     QualityScoreResponse,
     RebuttalItem,
+    SalesAuditKeyword,
+    SalesAuditKeywords,
+    SentimentData,
     TranscriptResponse,
     TranscriptSegment,
     TranscriptSegmentResponse,
@@ -332,6 +336,80 @@ def _build_call_response(call: Call) -> CallResponse:
             else:
                 metadata_extraction[k] = str(v)
 
+    # --- Enhanced Analysis Fields ---
+    escalation_kw_list: list = []
+    raw_escalation = (
+        call.escalation_keywords
+        if call.escalation_keywords is not None
+        else analysis.get("escalation_keywords", [])
+    )
+    if isinstance(raw_escalation, list):
+        for ek in raw_escalation:
+            if isinstance(ek, dict):
+                escalation_kw_list.append(
+                    EscalationKeyword(
+                        keyword=ek.get("keyword", ""),
+                        context=ek.get("context", ""),
+                        severity=ek.get("severity", "low"),
+                    )
+                )
+
+    raw_sentiment = (
+        call.sentiment_keywords
+        if call.sentiment_keywords is not None
+        else analysis.get("sentiment", {})
+    )
+    if isinstance(raw_sentiment, dict):
+        sentiment_data = SentimentData(
+            positive_keywords=raw_sentiment.get("positive_keywords", []),
+            negative_keywords=raw_sentiment.get("negative_keywords", []),
+            overall_sentiment=raw_sentiment.get("overall_sentiment", "neutral"),
+        )
+    else:
+        sentiment_data = SentimentData()
+
+    call_tags_list: list[str] = (
+        call.call_tags
+        if call.call_tags is not None
+        else analysis.get("call_tags", [])
+    )
+    if not isinstance(call_tags_list, list):
+        call_tags_list = []
+
+    # --- Sales Audit Keywords ---
+    sales_audit_kw: SalesAuditKeywords | None = None
+    raw_audit = (
+        call.sales_audit_keywords
+        if getattr(call, "sales_audit_keywords", None) is not None
+        else analysis.get("sales_audit_keywords")
+    )
+    if isinstance(raw_audit, dict):
+        audit_fields: dict[str, list[SalesAuditKeyword]] = {}
+        for cat in (
+            "compliance_violations",
+            "missed_opportunities",
+            "pricing_discounts",
+            "competitor_mentions",
+            "customer_pain_points",
+            "commitment_closing",
+            "objection_handling",
+            "negative_reactions",
+        ):
+            items_raw = raw_audit.get(cat, [])
+            kw_list: list[SalesAuditKeyword] = []
+            if isinstance(items_raw, list):
+                for item in items_raw:
+                    if isinstance(item, dict):
+                        kw_list.append(
+                            SalesAuditKeyword(
+                                keyword=item.get("keyword", ""),
+                                context=item.get("context", ""),
+                                severity=item.get("severity", "low"),
+                            )
+                        )
+            audit_fields[cat] = kw_list
+        sales_audit_kw = SalesAuditKeywords(**audit_fields)
+
     return CallResponse(
         id=call.id,
         tenant_id=call.tenant_id,
@@ -356,6 +434,10 @@ def _build_call_response(call: Call) -> CallResponse:
         path_to_conversion=path_to_conversion,
         metadata_extraction=metadata_extraction,
         follow_up_urgency=follow_up_urgency,
+        escalation_keywords=escalation_kw_list,
+        sentiment=sentiment_data,
+        call_tags=call_tags_list,
+        sales_audit_keywords=sales_audit_kw,
         created_at=call.created_at,
         updated_at=call.updated_at,
     )
@@ -658,6 +740,14 @@ def list_calls(
             source=call.source or "",
             follow_up_urgency=(
                 (call.analysis or {}).get("follow_up_urgency") if call.analysis else None
+            ),
+            call_tags=(
+                call.call_tags if isinstance(call.call_tags, list) else []
+            ),
+            overall_sentiment=(
+                (call.sentiment_keywords or {}).get("overall_sentiment")
+                if isinstance(call.sentiment_keywords, dict)
+                else None
             ),
             created_at=call.created_at,
         )

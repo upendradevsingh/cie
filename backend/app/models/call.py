@@ -82,6 +82,12 @@ class Call(TimestampMixin, Base):
         nullable=True,
     )
 
+    # ── Enhanced analysis fields ─────────────────────────────────────────
+    escalation_keywords: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    sentiment_keywords: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    call_tags: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    sales_audit_keywords: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
     # ── Lead / CRM metadata ─────────────────────────────────────────────
     lead_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     lead_name: Mapped[str | None] = mapped_column(String(255), nullable=True)

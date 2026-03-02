@@ -10,6 +10,7 @@ from app.models.persona import CallPersona, PersonaType
 from app.models.action_item import ActionItem, ActionUrgency
 from app.models.report import ReportStatus, WeeklyReport
 from app.models.integration import ApiKey, Integration
+from app.models.prompt_template import PromptTemplate
 
 __all__ = [
     # Base
@@ -42,4 +43,6 @@ __all__ = [
     # Integrations
     "Integration",
     "ApiKey",
+    # Prompt templates
+    "PromptTemplate",
 ]

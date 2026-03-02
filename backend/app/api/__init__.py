@@ -16,6 +16,7 @@ from app.api.analytics import router as analytics_router
 from app.api.reports import router as reports_router
 from app.api.users import agents_router, router as users_router
 from app.api.integrations import router as integrations_router
+from app.api.prompt_templates import router as prompt_templates_router
 
 api_router = APIRouter()
 
@@ -40,3 +41,6 @@ api_router.include_router(agents_router)
 
 # Integrations and API keys
 api_router.include_router(integrations_router)
+
+# Prompt templates
+api_router.include_router(prompt_templates_router)

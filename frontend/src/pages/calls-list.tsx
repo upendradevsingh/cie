@@ -14,6 +14,9 @@ import {
   AlertCircle,
   FileAudio,
   Phone,
+  SmilePlus,
+  Frown,
+  Meh,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCalls, uploadCall, getAgents } from "@/lib/api";
@@ -387,6 +390,12 @@ export default function CallsListPage() {
                     Intent
                   </th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Sentiment
+                  </th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Tags
+                  </th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Status
                   </th>
                 </tr>
@@ -431,6 +440,26 @@ export default function CallsListPage() {
                       />
                     </td>
                     <td className="px-4 py-3">
+                      <SentimentDot sentiment={call.overall_sentiment} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {(call.call_tags ?? []).slice(0, 2).map((tag) => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center rounded bg-slate-800 px-1.5 py-0.5 text-2xs text-slate-400"
+                          >
+                            {tag.replace(/_/g, " ")}
+                          </span>
+                        ))}
+                        {(call.call_tags ?? []).length > 2 && (
+                          <span className="text-2xs text-slate-600">
+                            +{call.call_tags.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
                       <StatusBadge status={call.status} />
                     </td>
                   </tr>
@@ -459,14 +488,32 @@ export default function CallsListPage() {
                   </div>
                   <ScoreBadge score={call.overall_score} />
                 </div>
-                <div className="mt-2 flex items-center gap-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   <IntentChip classification={call.intent_classification} />
+                  <SentimentDot sentiment={call.overall_sentiment} />
                   <StatusBadge status={call.status} />
                   <span className="ml-auto flex items-center gap-1 text-xs text-slate-500">
                     <Clock className="h-3 w-3" />
                     {formatDuration(call.duration)}
                   </span>
                 </div>
+                {(call.call_tags ?? []).length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {call.call_tags.slice(0, 3).map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center rounded bg-slate-800 px-1.5 py-0.5 text-2xs text-slate-400"
+                      >
+                        {tag.replace(/_/g, " ")}
+                      </span>
+                    ))}
+                    {call.call_tags.length > 3 && (
+                      <span className="text-2xs text-slate-600">
+                        +{call.call_tags.length - 3}
+                      </span>
+                    )}
+                  </div>
+                )}
               </button>
             ))}
           </div>
@@ -840,6 +887,38 @@ function StatusBadge({ status }: { status: CallStatus }) {
         <Loader2 className="mr-1 h-2.5 w-2.5 animate-spin" />
       ) : null}
       {status}
+    </span>
+  );
+}
+
+function SentimentDot({ sentiment }: { sentiment: string | null }) {
+  if (!sentiment) return null;
+  const config: Record<string, { icon: React.ReactNode; color: string }> = {
+    positive: {
+      icon: <SmilePlus className="h-3 w-3" />,
+      color: "text-emerald-400",
+    },
+    negative: {
+      icon: <Frown className="h-3 w-3" />,
+      color: "text-red-400",
+    },
+    mixed: {
+      icon: <Meh className="h-3 w-3" />,
+      color: "text-amber-400",
+    },
+    neutral: {
+      icon: <Meh className="h-3 w-3" />,
+      color: "text-slate-500",
+    },
+  };
+  const entry = config[sentiment] ?? config.neutral;
+  return (
+    <span
+      className={cn("flex items-center gap-1 text-2xs font-medium capitalize", entry!.color)}
+      title={`Sentiment: ${sentiment}`}
+    >
+      {entry!.icon}
+      {sentiment}
     </span>
   );
 }

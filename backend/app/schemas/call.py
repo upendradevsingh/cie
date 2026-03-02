@@ -234,6 +234,43 @@ class TranscriptResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class EscalationKeyword(BaseModel):
+    """Escalation keyword detected in a call."""
+
+    keyword: str
+    context: str
+    severity: str  # "high", "medium", "low"
+
+
+class SentimentData(BaseModel):
+    """Sentiment analysis data for a call."""
+
+    positive_keywords: List[str] = Field(default_factory=list)
+    negative_keywords: List[str] = Field(default_factory=list)
+    overall_sentiment: str = "neutral"  # "positive", "negative", "mixed", "neutral"
+
+
+class SalesAuditKeyword(BaseModel):
+    """A single keyword extracted for a sales audit category."""
+
+    keyword: str
+    context: str
+    severity: str  # "high", "medium", "low"
+
+
+class SalesAuditKeywords(BaseModel):
+    """Categorised sales audit keywords for auditor review."""
+
+    compliance_violations: List[SalesAuditKeyword] = Field(default_factory=list)
+    missed_opportunities: List[SalesAuditKeyword] = Field(default_factory=list)
+    pricing_discounts: List[SalesAuditKeyword] = Field(default_factory=list)
+    competitor_mentions: List[SalesAuditKeyword] = Field(default_factory=list)
+    customer_pain_points: List[SalesAuditKeyword] = Field(default_factory=list)
+    commitment_closing: List[SalesAuditKeyword] = Field(default_factory=list)
+    objection_handling: List[SalesAuditKeyword] = Field(default_factory=list)
+    negative_reactions: List[SalesAuditKeyword] = Field(default_factory=list)
+
+
 class CallSummary(BaseModel):
     """Lightweight call representation used in list views (matches frontend CallListItem)."""
 
@@ -252,6 +289,8 @@ class CallSummary(BaseModel):
     status: str = "pending"
     source: str = ""
     follow_up_urgency: Optional[str] = None
+    call_tags: List[str] = Field(default_factory=list)
+    overall_sentiment: Optional[str] = None
     created_at: datetime
 
 
@@ -425,6 +464,12 @@ class CallResponse(BaseModel):
     # Metadata
     metadata_extraction: Dict[str, Any] = Field(default_factory=dict)
     follow_up_urgency: Optional[str] = None
+
+    # Enhanced analysis
+    escalation_keywords: List[EscalationKeyword] = Field(default_factory=list)
+    sentiment: SentimentData = Field(default_factory=SentimentData)
+    call_tags: List[str] = Field(default_factory=list)
+    sales_audit_keywords: Optional[SalesAuditKeywords] = None
 
     created_at: datetime
     updated_at: Optional[datetime] = None

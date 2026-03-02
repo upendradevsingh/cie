@@ -268,6 +268,49 @@ export interface PathToConversion {
   next_best_action: string;
 }
 
+// ─── Enhanced Analysis ───────────────────────────────────────────────────────
+
+export interface EscalationKeyword {
+  keyword: string;
+  context: string;
+  severity: "high" | "medium" | "low";
+}
+
+export interface SentimentData {
+  positive_keywords: string[];
+  negative_keywords: string[];
+  overall_sentiment: "positive" | "negative" | "mixed" | "neutral";
+}
+
+export interface SalesAuditKeyword {
+  keyword: string;
+  context: string;
+  severity: "high" | "medium" | "low";
+}
+
+export interface SalesAuditKeywords {
+  compliance_violations: SalesAuditKeyword[];
+  missed_opportunities: SalesAuditKeyword[];
+  pricing_discounts: SalesAuditKeyword[];
+  competitor_mentions: SalesAuditKeyword[];
+  customer_pain_points: SalesAuditKeyword[];
+  commitment_closing: SalesAuditKeyword[];
+  objection_handling: SalesAuditKeyword[];
+  negative_reactions: SalesAuditKeyword[];
+}
+
+export interface PromptTemplate {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description: string;
+  template_content: string;
+  version: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── Calls ───────────────────────────────────────────────────────────────────
 
 export type CallStatus =
@@ -305,6 +348,10 @@ export interface CallData {
   path_to_conversion: PathToConversion;
   metadata_extraction: Record<string, string>;
   follow_up_urgency: FollowUpUrgency | null;
+  escalation_keywords: EscalationKeyword[];
+  sentiment: SentimentData;
+  call_tags: string[];
+  sales_audit_keywords: SalesAuditKeywords | null;
   created_at: string;
   updated_at: string;
 }
@@ -323,6 +370,8 @@ export interface CallListItem {
   status: CallStatus;
   source: string;
   follow_up_urgency: FollowUpUrgency | null;
+  call_tags: string[];
+  overall_sentiment: string | null;
   created_at: string;
 }
 
