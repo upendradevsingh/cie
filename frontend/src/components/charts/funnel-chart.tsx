@@ -1,4 +1,3 @@
-import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export interface FunnelSegment {
@@ -99,7 +98,7 @@ function FunnelChart({
                 className="h-1 opacity-30"
                 style={{
                   width: `${widthPercent - widthStep / 2}%`,
-                  background: `linear-gradient(to bottom, ${getComputedBgColor(segment.bgColor)}, ${getComputedBgColor(funnelSegments[index + 1].bgColor)})`,
+                  background: `linear-gradient(to bottom, ${getComputedBgColor(segment.bgColor)}, ${getComputedBgColor(funnelSegments[index + 1]?.bgColor ?? "")})`,
                 }}
               />
             )}

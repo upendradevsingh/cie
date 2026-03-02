@@ -58,7 +58,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "6901:8000"
     env_file:
       - .env
     environment:
@@ -109,7 +109,7 @@ services:
       --loglevel=info
       --concurrency=4
       --max-tasks-per-child=100
-      -Q default,transcription,analysis,reports
+      -Q saleslens,default,transcription,analysis,reports
     healthcheck:
       test: ["CMD-SHELL", "celery -A app.tasks inspect ping --timeout 10"]
       interval: 60s
@@ -123,10 +123,10 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: http://localhost:8000
+        VITE_API_URL: http://localhost:6901
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - "6900:80"
     depends_on:
       app:
         condition: service_healthy

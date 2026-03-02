@@ -19,7 +19,6 @@ import {
   Lightbulb,
   CheckCircle2,
   XCircle,
-  Clock,
   Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,7 +27,6 @@ import type {
   WeeklyReportListItem,
   WeeklyReport,
   AgentWeeklyBreakdown,
-  HotLead,
 } from "@/lib/types";
 
 // ────────────────────────────────────────────────────────────────────

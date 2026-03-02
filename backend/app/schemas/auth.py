@@ -2,6 +2,8 @@
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.schemas.user import UserResponse
+
 
 class TokenData(BaseModel):
     """Decoded JWT token payload."""
@@ -16,6 +18,21 @@ class Token(BaseModel):
 
     access_token: str = Field(..., description="JWT access token")
     token_type: str = Field(default="bearer", description="Token type (always bearer)")
+
+
+class AuthTokens(BaseModel):
+    """Token pair returned to the frontend."""
+
+    access_token: str = Field(..., description="JWT access token")
+    refresh_token: str = Field(..., description="JWT refresh token")
+    token_type: str = Field(default="bearer", description="Token type (always bearer)")
+
+
+class AuthResponse(BaseModel):
+    """Full login/register response expected by the frontend."""
+
+    user: UserResponse
+    tokens: AuthTokens
 
 
 class LoginRequest(BaseModel):

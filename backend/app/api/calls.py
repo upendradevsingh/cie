@@ -20,14 +20,25 @@ from app.models.persona import CallPersona
 from app.models.action_item import ActionItem
 from app.models.user import User
 from app.schemas.call import (
+    ActionItemResponse,
+    BANTScoreResponse,
     CallListFilters,
     CallListResponse,
     CallResponse,
     CallSummary,
     CallUpload,
     CallWebhook,
+    CustomFieldItem,
+    IntentSignalResponse,
+    LeadIntelligenceResponse,
+    ObjectionResponse,
+    PathToConversionResponse,
+    PersonaDataResponse,
+    QualityScoreResponse,
+    RebuttalItem,
     TranscriptResponse,
     TranscriptSegment,
+    TranscriptSegmentResponse,
 )
 from app.schemas.quality import QAOverride
 from app.services.auth import get_current_active_user, require_role
@@ -54,109 +65,297 @@ def _validate_audio_extension(filename: str) -> str:
 
 
 def _build_call_response(call: Call) -> CallResponse:
-    """Transform a Call ORM instance into a CallResponse schema."""
-    # Quality scores
-    quality_scores = None
-    if call.quality_scores:
-        quality_scores = [
-            {
-                "parameter_name": qs.parameter.name if qs.parameter else "Unknown",
-                "parameter_category": qs.parameter.category if qs.parameter else "",
-                "score": qs.score,
-                "weight": qs.parameter.weight if qs.parameter else 0,
-                "justification": qs.justification or "",
-            }
-            for qs in call.quality_scores
-        ]
-
-    # Intent signals
-    intent_signals_out = None
-    if call.intent_signals:
-        intent_signals_out = [
-            {
-                "signal_name": sig.signal.name if sig.signal else "Unknown",
-                "detected": sig.detected,
-                "details": sig.details or "",
-            }
-            for sig in call.intent_signals
-        ]
-
-    # Persona / BANT
-    persona_out = None
-    if call.persona:
-        persona_out = {
-            "persona_type_name": (
-                call.persona.persona_type.name if call.persona.persona_type else None
-            ),
-            "budget_score": call.persona.budget_score,
-            "authority_score": call.persona.authority_score,
-            "need_score": call.persona.need_score,
-            "timeline_score": call.persona.timeline_score,
-            "discovery_insights": call.persona.discovery_insights or [],
-        }
-
-    # Action items
-    action_items_out = None
-    if call.action_items:
-        action_items_out = [
-            {
-                "id": str(ai.id),
-                "description": ai.description,
-                "category": ai.category,
-                "urgency": ai.urgency.value if hasattr(ai.urgency, "value") else ai.urgency,
-                "completed": ai.completed,
-            }
-            for ai in call.action_items
-        ]
-
-    # Extract analysis sub-fields
+    """Transform a Call ORM instance into a CallResponse matching frontend CallData."""
     analysis = call.analysis or {}
-    objections = analysis.get("objections")
-    path_to_conversion = analysis.get("path_to_conversion")
-    follow_up_urgency = analysis.get("follow_up_urgency")
-    extracted_metadata = analysis.get("extracted_metadata")
 
-    # Transcript segments
-    transcript_segments = None
-    if call.transcript_segments:
-        segments_raw = call.transcript_segments
-        if isinstance(segments_raw, list):
-            transcript_segments = [
-                TranscriptSegment(**seg) for seg in segments_raw
-            ]
+    # --- Transcript ---
+    transcript = []
+    if call.transcript_segments and isinstance(call.transcript_segments, list):
+        for idx, seg in enumerate(call.transcript_segments):
+            speaker_raw = seg.get("speaker", "unknown")
+            speaker = speaker_raw.lower() if speaker_raw else "unknown"
+            if speaker not in ("agent", "customer"):
+                speaker = (
+                    "agent"
+                    if "agent" in speaker
+                    else "customer" if "customer" in speaker else "unknown"
+                )
+            transcript.append(
+                TranscriptSegmentResponse(
+                    id=str(idx),
+                    speaker=speaker,
+                    speaker_name=seg.get("speaker", speaker.capitalize()),
+                    text=seg.get("text", ""),
+                    start_time=seg.get("start_time", 0),
+                    end_time=seg.get("end_time", 0),
+                    confidence=seg.get("confidence", 1.0),
+                    is_key_moment=seg.get("is_key_moment", False),
+                    key_moment_label=seg.get("key_moment_label"),
+                )
+            )
+
+    # --- Quality Scores ---
+    quality_scores = []
+    if call.quality_scores:
+        # Use ORM relationship data (call was analyzed after params were seeded)
+        for qs in call.quality_scores:
+            quality_scores.append(
+                QualityScoreResponse(
+                    parameter_id=str(qs.parameter_id) if qs.parameter_id else "",
+                    parameter_name=qs.parameter.name if qs.parameter else "Unknown",
+                    category=qs.parameter.category if qs.parameter else "General",
+                    score=qs.score,
+                    max_score=10.0,
+                    weight=qs.parameter.weight if qs.parameter else 0,
+                    justification=qs.justification or "",
+                )
+            )
+    elif analysis.get("quality_scores"):
+        # Fallback: use raw analysis JSON (call analyzed before params seeded)
+        for idx, qs in enumerate(analysis["quality_scores"]):
+            if isinstance(qs, dict):
+                quality_scores.append(
+                    QualityScoreResponse(
+                        parameter_id=str(idx),
+                        parameter_name=qs.get("parameter_name", "Unknown"),
+                        category=qs.get("parameter_category", "General"),
+                        score=qs.get("score", 0),
+                        max_score=10.0,
+                        weight=qs.get("weight", 0),
+                        justification=qs.get("justification", ""),
+                    )
+                )
+
+    # --- Lead Intelligence ---
+    # Intent signals from ORM relationship
+    signals = []
+    buying_signals = []
+    if call.intent_signals:
+        for sig in call.intent_signals:
+            signals.append(
+                IntentSignalResponse(
+                    id=str(sig.id),
+                    name=sig.signal.name if sig.signal else "Unknown",
+                    description=sig.signal.description if sig.signal else "",
+                    detected=sig.detected,
+                    details=sig.details or "",
+                )
+            )
+            if sig.detected and sig.details:
+                buying_signals.append(sig.details)
+    elif analysis.get("intent_signals"):
+        # Fallback: use raw analysis JSON
+        for idx, sig in enumerate(analysis["intent_signals"]):
+            if isinstance(sig, dict):
+                detected = sig.get("detected", False)
+                details = sig.get("details", "")
+                signals.append(
+                    IntentSignalResponse(
+                        id=str(idx),
+                        name=sig.get("signal_name", "Unknown"),
+                        description="",
+                        detected=detected,
+                        details=details,
+                    )
+                )
+                if detected and details:
+                    buying_signals.append(details)
+
+    # Key objections from analysis
+    key_objections = []
+    raw_objections = analysis.get("objections") or []
+    if isinstance(raw_objections, list):
+        for obj in raw_objections:
+            if isinstance(obj, dict):
+                key_objections.append(
+                    ObjectionResponse(
+                        objection=obj.get("objection", obj.get("text", str(obj))),
+                        category=obj.get("category", "general"),
+                        severity=obj.get("severity", "medium"),
+                        rebuttal_suggestion=obj.get(
+                            "rebuttal_suggestion", obj.get("rebuttal")
+                        ),
+                    )
+                )
+            elif isinstance(obj, str):
+                key_objections.append(ObjectionResponse(objection=obj))
+
+    lead_intelligence = LeadIntelligenceResponse(
+        intent_score=call.lead_intent_score or 0,
+        classification=(
+            call.intent_classification.value
+            if call.intent_classification
+            and hasattr(call.intent_classification, "value")
+            else call.intent_classification or "cold"
+        ),
+        signals=signals,
+        key_objections=key_objections,
+        buying_signals=buying_signals,
+    )
+
+    # --- Persona ---
+    persona_data = PersonaDataResponse()
+    if call.persona:
+        raw_persona = analysis.get("persona", {})
+        if not isinstance(raw_persona, dict):
+            raw_persona = {}
+        persona_data = PersonaDataResponse(
+            persona_type=(
+                call.persona.persona_type.name
+                if call.persona.persona_type
+                else raw_persona.get("type", "Unknown")
+            ),
+            persona_type_id=(
+                str(call.persona.persona_type_id)
+                if call.persona.persona_type_id
+                else None
+            ),
+            bant=BANTScoreResponse(
+                budget=call.persona.budget_score or 0,
+                authority=call.persona.authority_score or 0,
+                need=call.persona.need_score or 0,
+                timeline=call.persona.timeline_score or 0,
+            ),
+            discovery_insights=(
+                call.persona.discovery_insights
+                if isinstance(call.persona.discovery_insights, list)
+                else []
+            ),
+        )
+    elif analysis.get("persona") and isinstance(analysis["persona"], dict):
+        # Fallback: use raw analysis JSON persona
+        raw_p = analysis["persona"]
+        persona_data = PersonaDataResponse(
+            persona_type=raw_p.get("type", "Unknown"),
+            persona_type_id=None,
+            bant=BANTScoreResponse(
+                budget=raw_p.get("budget_score", 0),
+                authority=raw_p.get("authority_score", 0),
+                need=raw_p.get("need_score", 0),
+                timeline=raw_p.get("timeline_score", 0),
+            ),
+            discovery_insights=(
+                raw_p.get("discovery_insights", [])
+                if isinstance(raw_p.get("discovery_insights"), list)
+                else []
+            ),
+        )
+
+    # --- Action Items ---
+    urgency_priority_map = {
+        "immediate": "high",
+        "this_week": "medium",
+        "next_week": "low",
+        "nurture": "low",
+    }
+    category_type_map = {
+        "proposal": "send_info",
+        "demo": "schedule",
+        "follow_up": "follow_up",
+        "meeting": "schedule",
+        "email": "send_info",
+        "call": "follow_up",
+    }
+    action_items = []
+    if call.action_items:
+        for ai in call.action_items:
+            urgency_val = (
+                ai.urgency.value if hasattr(ai.urgency, "value") else str(ai.urgency)
+            )
+            category_val = ai.category or ""
+            action_items.append(
+                ActionItemResponse(
+                    id=str(ai.id),
+                    call_id=str(ai.call_id),
+                    text=ai.description,
+                    type=category_type_map.get(category_val.lower(), "other"),
+                    urgency=urgency_val,
+                    category=category_val,
+                    priority=urgency_priority_map.get(urgency_val, "medium"),
+                    due_date=None,
+                    completed=ai.completed,
+                    created_at=(
+                        ai.created_at.isoformat() if ai.created_at else ""
+                    ),
+                )
+            )
+
+    # --- Path to Conversion ---
+    raw_ptc = analysis.get("path_to_conversion")
+    talking_points: list[str] = []
+    if isinstance(raw_ptc, str) and raw_ptc:
+        talking_points = [raw_ptc]
+    elif isinstance(raw_ptc, list):
+        talking_points = [str(p) for p in raw_ptc]
+
+    raw_rebuttals = analysis.get("rebuttals") or []
+    rebuttals = []
+    if isinstance(raw_rebuttals, list):
+        for r in raw_rebuttals:
+            if isinstance(r, dict):
+                rebuttals.append(
+                    RebuttalItem(
+                        objection=r.get("objection", ""),
+                        rebuttal=r.get("rebuttal", r.get("response", "")),
+                    )
+                )
+
+    follow_up_urgency = analysis.get("follow_up_urgency")
+    next_best_action = analysis.get("call_summary", "")
+    if talking_points and not next_best_action:
+        next_best_action = talking_points[0]
+
+    path_to_conversion = PathToConversionResponse(
+        talking_points=talking_points,
+        rebuttals=rebuttals,
+        follow_up_urgency=follow_up_urgency or "nurture",
+        next_best_action=next_best_action,
+    )
+
+    # --- Custom Fields ---
+    custom_fields = []
+    if call.custom_fields and isinstance(call.custom_fields, dict):
+        for k, v in call.custom_fields.items():
+            custom_fields.append(CustomFieldItem(key=k, value=str(v)))
+
+    # --- Metadata Extraction ---
+    metadata_extraction: dict[str, str] = {}
+    raw_meta = (
+        analysis.get("key_data_points")
+        or analysis.get("extracted_metadata")
+        or {}
+    )
+    if isinstance(raw_meta, dict):
+        for k, v in raw_meta.items():
+            if isinstance(v, list):
+                metadata_extraction[k] = ", ".join(str(i) for i in v)
+            else:
+                metadata_extraction[k] = str(v)
 
     return CallResponse(
         id=call.id,
         tenant_id=call.tenant_id,
-        agent_id=call.agent_id,
-        agent_name=call.agent.full_name if call.agent else None,
-        lead_id=call.lead_id,
-        lead_name=call.lead_name,
-        lead_phone=call.lead_phone,
-        source=call.source,
         recording_url=call.recording_url,
-        duration=call.duration_seconds,
-        language=call.language or "en",
-        status=call.status.value if hasattr(call.status, "value") else str(call.status),
-        custom_fields=call.custom_fields,
-        transcript_segments=transcript_segments,
-        raw_transcript=call.transcript_raw,
-        overall_score=call.overall_score,
-        quality_scores=quality_scores,
-        intent_score=call.lead_intent_score,
-        intent_classification=(
-            call.intent_classification.value
-            if call.intent_classification and hasattr(call.intent_classification, "value")
-            else call.intent_classification
+        duration=call.duration_seconds or 0,
+        agent_name=call.agent.full_name if call.agent else "",
+        agent_id=call.agent_id,
+        lead_name=call.lead_name or "",
+        lead_id=call.lead_id or "",
+        lead_phone=call.lead_phone or "",
+        source=call.source or "",
+        status=(
+            call.status.value if hasattr(call.status, "value") else str(call.status)
         ),
-        intent_signals=intent_signals_out,
-        objections=objections,
-        persona=persona_out,
-        action_items=action_items_out,
+        custom_fields=custom_fields,
+        transcript=transcript,
+        quality_scores=quality_scores,
+        overall_score=call.overall_score or 0,
+        lead_intelligence=lead_intelligence,
+        persona=persona_data,
+        action_items=action_items,
         path_to_conversion=path_to_conversion,
+        metadata_extraction=metadata_extraction,
         follow_up_urgency=follow_up_urgency,
-        extracted_metadata=extracted_metadata,
-        analysis_raw=call.analysis,
         created_at=call.created_at,
         updated_at=call.updated_at,
     )
@@ -442,26 +641,38 @@ def list_calls(
     items = [
         CallSummary(
             id=call.id,
-            agent_name=call.agent.full_name if call.agent else None,
-            lead_name=call.lead_name,
-            duration=call.duration_seconds,
-            overall_score=call.overall_score,
+            agent_name=call.agent.full_name if call.agent else "",
+            agent_id=call.agent_id,
+            lead_name=call.lead_name or "",
+            lead_id=call.lead_id or "",
+            lead_phone=call.lead_phone or "",
+            duration=call.duration_seconds or 0,
+            overall_score=call.overall_score or 0,
             intent_classification=(
                 call.intent_classification.value
                 if call.intent_classification and hasattr(call.intent_classification, "value")
                 else call.intent_classification
             ),
+            intent_score=call.lead_intent_score or 0,
             status=call.status.value if hasattr(call.status, "value") else str(call.status),
+            source=call.source or "",
+            follow_up_urgency=(
+                (call.analysis or {}).get("follow_up_urgency") if call.analysis else None
+            ),
             created_at=call.created_at,
         )
         for call in calls
     ]
+
+    import math
+    total_pages = max(1, math.ceil(total / page_size))
 
     return CallListResponse(
         items=items,
         total=total,
         page=page,
         page_size=page_size,
+        total_pages=total_pages,
     )
 
 

@@ -235,29 +235,23 @@ class TranscriptResponse(BaseModel):
 
 
 class CallSummary(BaseModel):
-    """Lightweight call representation used in list views."""
+    """Lightweight call representation used in list views (matches frontend CallListItem)."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    agent_name: Optional[str] = None
-    lead_name: Optional[str] = None
-    duration: Optional[float] = Field(
-        default=None,
-        description="Call duration in seconds",
-    )
-    overall_score: Optional[float] = Field(
-        default=None,
-        description="Weighted quality score (0-100)",
-    )
-    intent_classification: Optional[str] = Field(
-        default=None,
-        description="hot / warm / cold",
-    )
-    status: str = Field(
-        default="pending",
-        description="Processing status",
-    )
+    agent_name: str = ""
+    agent_id: Optional[UUID] = None
+    lead_name: str = ""
+    lead_id: str = ""
+    lead_phone: str = ""
+    duration: float = 0
+    overall_score: float = 0
+    intent_classification: Optional[str] = None
+    intent_score: float = 0
+    status: str = "pending"
+    source: str = ""
+    follow_up_urgency: Optional[str] = None
     created_at: datetime
 
 
@@ -268,57 +262,169 @@ class CallListResponse(BaseModel):
     total: int = Field(..., ge=0, description="Total matching records")
     page: int = Field(..., ge=1)
     page_size: int = Field(..., ge=1)
+    total_pages: int = Field(default=1, ge=1)
+
+
+# ---------------------------------------------------------------------------
+# Nested response models for Call Detail (matching frontend CallData)
+# ---------------------------------------------------------------------------
+
+
+class TranscriptSegmentResponse(BaseModel):
+    """Enriched transcript segment for call detail API response."""
+
+    id: str
+    speaker: str
+    speaker_name: str
+    text: str
+    start_time: float
+    end_time: float
+    confidence: float = 1.0
+    is_key_moment: bool = False
+    key_moment_label: Optional[str] = None
+
+
+class QualityScoreResponse(BaseModel):
+    """Quality score for a single parameter."""
+
+    parameter_id: str
+    parameter_name: str
+    category: str
+    score: float
+    max_score: float = 10.0
+    weight: float
+    justification: str
+
+
+class IntentSignalResponse(BaseModel):
+    """Intent signal detection result."""
+
+    id: str
+    name: str
+    description: str = ""
+    detected: bool
+    details: Optional[str] = None
+
+
+class ObjectionResponse(BaseModel):
+    """Extracted objection from the call."""
+
+    objection: str
+    category: str = "general"
+    severity: str = "medium"
+    rebuttal_suggestion: Optional[str] = None
+
+
+class LeadIntelligenceResponse(BaseModel):
+    """Lead intelligence analysis."""
+
+    intent_score: float = 0
+    classification: str = "cold"
+    signals: List[IntentSignalResponse] = Field(default_factory=list)
+    key_objections: List[ObjectionResponse] = Field(default_factory=list)
+    buying_signals: List[str] = Field(default_factory=list)
+
+
+class BANTScoreResponse(BaseModel):
+    """BANT scoring breakdown."""
+
+    budget: float = 0
+    authority: float = 0
+    need: float = 0
+    timeline: float = 0
+
+
+class PersonaDataResponse(BaseModel):
+    """Persona analysis with BANT."""
+
+    persona_type: str = "Unknown"
+    persona_type_id: Optional[str] = None
+    bant: BANTScoreResponse = Field(default_factory=BANTScoreResponse)
+    discovery_insights: List[str] = Field(default_factory=list)
+
+
+class ActionItemResponse(BaseModel):
+    """Action item extracted from call."""
+
+    id: str
+    call_id: str
+    text: str
+    type: str = "follow_up"
+    urgency: str = "this_week"
+    category: str = ""
+    priority: str = "medium"
+    due_date: Optional[str] = None
+    completed: bool = False
+    created_at: str = ""
+
+
+class RebuttalItem(BaseModel):
+    """Objection-rebuttal pair."""
+
+    objection: str
+    rebuttal: str
+
+
+class PathToConversionResponse(BaseModel):
+    """AI-generated path to conversion."""
+
+    talking_points: List[str] = Field(default_factory=list)
+    rebuttals: List[RebuttalItem] = Field(default_factory=list)
+    follow_up_urgency: str = "nurture"
+    next_best_action: str = ""
+
+
+class CustomFieldItem(BaseModel):
+    """Key-value custom field."""
+
+    key: str
+    value: str
 
 
 class CallResponse(BaseModel):
-    """Full call detail — includes transcript, analysis, scores, and metadata."""
+    """Full call detail — matches frontend CallData interface."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     tenant_id: UUID
-    agent_id: Optional[UUID] = None
-    agent_name: Optional[str] = None
-    lead_id: Optional[str] = None
-    lead_name: Optional[str] = None
-    lead_phone: Optional[str] = None
-    source: Optional[str] = None
     recording_url: Optional[str] = None
-    duration: Optional[float] = None
-    language: str = "en"
+    duration: float = 0
+    agent_name: str = ""
+    agent_id: Optional[UUID] = None
+    lead_name: str = ""
+    lead_id: str = ""
+    lead_phone: str = ""
+    source: str = ""
     status: str = "pending"
-    custom_fields: Optional[Dict[str, Any]] = None
+    custom_fields: List[CustomFieldItem] = Field(default_factory=list)
 
     # Transcript
-    transcript_segments: Optional[List[TranscriptSegment]] = None
-    raw_transcript: Optional[str] = None
+    transcript: List[TranscriptSegmentResponse] = Field(default_factory=list)
 
     # Quality scores
-    overall_score: Optional[float] = None
-    quality_scores: Optional[List[Dict[str, Any]]] = Field(
-        default=None,
-        description="Per-parameter quality scores with justifications",
+    quality_scores: List[QualityScoreResponse] = Field(default_factory=list)
+    overall_score: float = 0
+
+    # Lead Intelligence (nested)
+    lead_intelligence: LeadIntelligenceResponse = Field(
+        default_factory=LeadIntelligenceResponse,
     )
 
-    # Lead intelligence
-    intent_score: Optional[float] = None
-    intent_classification: Optional[str] = None
-    intent_signals: Optional[List[Dict[str, Any]]] = None
-    objections: Optional[List[Dict[str, Any]]] = None
+    # Persona (nested)
+    persona: PersonaDataResponse = Field(default_factory=PersonaDataResponse)
 
-    # Persona / BANT
-    persona: Optional[Dict[str, Any]] = None
+    # Action Items
+    action_items: List[ActionItemResponse] = Field(default_factory=list)
 
-    # Action items
-    action_items: Optional[List[Dict[str, Any]]] = None
-    path_to_conversion: Optional[List[str]] = None
+    # Path to Conversion (nested)
+    path_to_conversion: PathToConversionResponse = Field(
+        default_factory=PathToConversionResponse,
+    )
+
+    # Metadata
+    metadata_extraction: Dict[str, Any] = Field(default_factory=dict)
     follow_up_urgency: Optional[str] = None
-
-    # Metadata extraction
-    extracted_metadata: Optional[Dict[str, Any]] = None
-
-    # LLM raw analysis (stored for debugging / audit)
-    analysis_raw: Optional[Dict[str, Any]] = None
 
     created_at: datetime
     updated_at: Optional[datetime] = None

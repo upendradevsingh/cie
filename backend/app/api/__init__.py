@@ -14,7 +14,7 @@ from app.api.intent import router as intent_router
 from app.api.personas import router as personas_router
 from app.api.analytics import router as analytics_router
 from app.api.reports import router as reports_router
-from app.api.users import router as users_router
+from app.api.users import agents_router, router as users_router
 from app.api.integrations import router as integrations_router
 
 api_router = APIRouter()
@@ -36,6 +36,7 @@ api_router.include_router(reports_router)
 
 # User and tenant management
 api_router.include_router(users_router)
+api_router.include_router(agents_router)
 
 # Integrations and API keys
 api_router.include_router(integrations_router)

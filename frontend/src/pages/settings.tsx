@@ -10,8 +10,6 @@ import {
   AlertCircle,
   CheckCircle2,
   Copy,
-  Eye,
-  EyeOff,
   Sparkles,
   Key,
   Plug,
@@ -62,7 +60,6 @@ import type {
   Integration,
   CreateIntegrationRequest,
   UpdateIntegrationRequest,
-  ApiKey,
   CreateApiKeyRequest,
   CreateApiKeyResponse,
   User,
@@ -943,7 +940,6 @@ function IntegrationsTab() {
   const queryClient = useQueryClient();
   const [editItem, setEditItem] = useState<Integration | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [showApiKeys, setShowApiKeys] = useState(false);
 
   const { data: integrations, isLoading } = useQuery({
     queryKey: ["integrations"],
@@ -1054,13 +1050,9 @@ function IntegrationsTab() {
               Manage API keys for webhook authentication
             </p>
           </div>
-          <button
-            onClick={() => setShowApiKeys(true)}
-            className="flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-          >
+          <span className="flex items-center gap-2 text-sm text-slate-500">
             <Key className="h-3.5 w-3.5" />
-            Manage Keys
-          </button>
+          </span>
         </div>
         <ApiKeysSection />
       </div>
@@ -1253,7 +1245,6 @@ function IntegrationDialog({
 
 function ApiKeysSection() {
   const queryClient = useQueryClient();
-  const [showCreate, setShowCreate] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
   const [createdKey, setCreatedKey] = useState<CreateApiKeyResponse | null>(
     null,
@@ -1409,7 +1400,6 @@ function ApiKeysSection() {
 // ────────────────────────────────────────────────────────────────────
 
 function UsersTab() {
-  const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const [editItem, setEditItem] = useState<User | null>(null);
   const [showCreate, setShowCreate] = useState(false);

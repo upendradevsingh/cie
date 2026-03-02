@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 import { getCalls, uploadCall, getAgents } from "@/lib/api";
 import type {
   CallFilters,
-  CallListItem,
   CallsListResponse,
   CallStatus,
   IntentClassification,
@@ -534,7 +533,6 @@ interface UploadModalProps {
 
 function UploadModal({ onClose, onSuccess }: UploadModalProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [agentName, setAgentName] = useState("");
   const [agentId, setAgentId] = useState("");
   const [leadName, setLeadName] = useState("");
   const [leadId, setLeadId] = useState("");
@@ -542,6 +540,11 @@ function UploadModal({ onClose, onSuccess }: UploadModalProps) {
   const [source, setSource] = useState("");
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: agents } = useQuery<AgentSummary[]>({
+    queryKey: ["agents"],
+    queryFn: getAgents,
+  });
 
   const uploadMutation = useMutation({
     mutationFn: (formData: FormData) => uploadCall(formData),
@@ -562,16 +565,15 @@ function UploadModal({ onClose, onSuccess }: UploadModalProps) {
       setUploadError("Please select a recording file.");
       return;
     }
-    if (!agentName.trim()) {
-      setUploadError("Agent name is required.");
+    if (!agentId) {
+      setUploadError("Please select an agent.");
       return;
     }
     setUploadError(null);
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("agent_name", agentName);
-    if (agentId) formData.append("agent_id", agentId);
+    formData.append("agent_id", agentId);
     formData.append("lead_name", leadName);
     if (leadId) formData.append("lead_id", leadId);
     if (leadPhone) formData.append("lead_phone", leadPhone);
@@ -672,18 +674,23 @@ function UploadModal({ onClose, onSuccess }: UploadModalProps) {
 
           {/* Metadata fields */}
           <div className="grid grid-cols-2 gap-3">
-            <ModalField
-              label="Agent name *"
-              value={agentName}
-              onChange={setAgentName}
-              placeholder="Jane Smith"
-            />
-            <ModalField
-              label="Agent ID"
-              value={agentId}
-              onChange={setAgentId}
-              placeholder="agent-123"
-            />
+            <div className="col-span-2">
+              <label className="mb-1 block text-xs font-medium text-slate-400">
+                Agent *
+              </label>
+              <select
+                value={agentId}
+                onChange={(e) => setAgentId(e.target.value)}
+                className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-white focus:border-accent-500 focus:outline-none"
+              >
+                <option value="">Select an agent</option>
+                {agents?.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <ModalField
               label="Lead name"
               value={leadName}

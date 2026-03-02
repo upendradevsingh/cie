@@ -74,3 +74,4 @@ class UserResponse(UserBase):
     tenant_id: UUID
     is_active: bool
     created_at: datetime
+    updated_at: datetime

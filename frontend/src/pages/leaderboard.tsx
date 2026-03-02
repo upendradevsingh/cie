@@ -12,7 +12,6 @@ import {
   BarChart3,
   LayoutGrid,
   List,
-  Loader2,
   AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";

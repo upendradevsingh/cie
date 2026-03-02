@@ -49,7 +49,7 @@ export default function DashboardPage() {
     error,
   } = useQuery<TeamAnalytics>({
     queryKey: ["analytics", "team"],
-    queryFn: getTeamAnalytics,
+    queryFn: () => getTeamAnalytics(),
     refetchInterval: 60_000, // refresh every minute
   });
 

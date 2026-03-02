@@ -41,7 +41,7 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { getCall, qaOverrideScores } from "@/lib/api";
-import { useAuth, useRequireRole } from "@/hooks/use-auth";
+import { useRequireRole } from "@/hooks/use-auth";
 import type {
   CallData,
   CallStatus,

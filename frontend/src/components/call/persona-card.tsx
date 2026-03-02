@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";

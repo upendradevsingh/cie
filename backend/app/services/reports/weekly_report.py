@@ -23,7 +23,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import and_, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 logger = logging.getLogger(__name__)
 
@@ -368,6 +368,7 @@ class WeeklyReportGenerator:
 
         return (
             self._db.query(Call)
+            .options(joinedload(Call.agent))
             .filter(
                 and_(
                     Call.tenant_id == tenant_id,
@@ -549,12 +550,13 @@ class WeeklyReportGenerator:
 
         result: List[Dict[str, Any]] = []
         for score, call in scored[:limit]:
-            analysis = getattr(call, "analysis_result", None)
+            agent = getattr(call, "agent", None)
+            agent_name = agent.full_name if agent else "Unknown"
             result.append(
                 {
                     "call_id": str(call.id),
-                    "agent_name": getattr(call, "agent_name", "Unknown"),
-                    "lead_name": getattr(call, "lead_name", "Unknown"),
+                    "agent_name": agent_name,
+                    "lead_name": getattr(call, "lead_name", None) or "Unknown",
                     "overall_score": round(score, 2),
                     "intent_classification": (
                         WeeklyReportGenerator._get_intent_classification(call)
@@ -612,12 +614,14 @@ class WeeklyReportGenerator:
             analysis = getattr(call, "analysis_result", None)
             intent_score = WeeklyReportGenerator._get_intent_score(call) or 0
 
+            agent = getattr(call, "agent", None)
+            agent_name = agent.full_name if agent else "Unknown"
             hot.append(
                 {
                     "call_id": str(call.id),
-                    "lead_name": getattr(call, "lead_name", "Unknown"),
+                    "lead_name": getattr(call, "lead_name", None) or "Unknown",
                     "lead_phone": getattr(call, "lead_phone", None),
-                    "agent_name": getattr(call, "agent_name", "Unknown"),
+                    "agent_name": agent_name,
                     "intent_score": round(intent_score, 1),
                     "follow_up_urgency": (
                         analysis.get("follow_up_urgency", "this_week")

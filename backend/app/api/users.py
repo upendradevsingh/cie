@@ -14,6 +14,36 @@ from app.services.auth import get_current_active_user, hash_password, require_ro
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
+# Separate router for /agents (no /users prefix)
+agents_router = APIRouter(tags=["Users"])
+
+
+@agents_router.get(
+    "/agents",
+    summary="List agents for dropdowns/filters",
+)
+def list_agents(
+    db: Annotated[Session, Depends(get_db_with_tenant)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> list[dict]:
+    """Return a lightweight list of active users for filter dropdowns."""
+    set_tenant_context(db, current_user.tenant_id)
+
+    users = (
+        db.query(User)
+        .filter(
+            User.tenant_id == current_user.tenant_id,
+            User.is_active.is_(True),
+        )
+        .order_by(User.full_name)
+        .all()
+    )
+
+    return [
+        {"id": str(u.id), "name": u.full_name, "avatar_url": None}
+        for u in users
+    ]
+
 
 # ---------------------------------------------------------------------------
 # GET /users

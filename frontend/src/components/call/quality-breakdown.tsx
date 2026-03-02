@@ -1,6 +1,6 @@
 import * as React from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { cn, scoreToPercent } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import type { QualityScore } from "@/types/call";
 
@@ -90,8 +90,6 @@ interface CategorySectionProps {
 
 function CategorySection({ group, defaultExpanded }: CategorySectionProps) {
   const [expanded, setExpanded] = React.useState(defaultExpanded);
-
-  const categoryPct = scoreToPercent(group.avgScore, group.avgMaxScore);
 
   return (
     <div className="rounded-lg border border-slate-800 overflow-hidden">

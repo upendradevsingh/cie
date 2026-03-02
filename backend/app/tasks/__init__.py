@@ -58,3 +58,7 @@ celery_app.conf.update(
 
 # Auto-discover task modules within the app.tasks package.
 celery_app.autodiscover_tasks(["app.tasks"])
+
+# Explicit imports to ensure tasks are registered with the worker.
+import app.tasks.call_processing  # noqa: F401, E402
+import app.tasks.report_generation  # noqa: F401, E402

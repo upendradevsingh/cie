@@ -352,21 +352,144 @@ export async function deleteUser(id: string): Promise<void> {
 
 // ── Reports ─────────────────────────────────────────────────────────
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+/** Map the backend WeeklyReportResponse into the frontend WeeklyReportListItem shape. */
+function _mapReportListItem(raw: any): WeeklyReportListItem {
+  const rd = raw.report_data ?? {};
+  const summary = rd.summary ?? {};
+  return {
+    id: raw.id,
+    week_start: raw.week_start,
+    week_end: raw.week_end,
+    status: raw.status,
+    summary_total_calls: summary.total_calls ?? 0,
+    summary_avg_quality: summary.avg_quality_score ?? 0,
+    created_at: raw.created_at,
+  };
+}
+
+/** Map the backend WeeklyReportResponse into the full frontend WeeklyReport shape. */
+function _mapReportDetail(raw: any): WeeklyReport {
+  const rd = raw.report_data ?? {};
+  const summary = rd.summary ?? {};
+  const highlights = rd.highlights ?? {};
+
+  // Map agent_performance → agent_breakdowns
+  const agentPerf: any[] = rd.agent_performance ?? [];
+  const agentBreakdowns: import("@/lib/types").AgentWeeklyBreakdown[] = agentPerf.map(
+    (a: any) => ({
+      agent_id: a.agent_id ?? "",
+      agent_name: a.agent_name ?? "Unknown",
+      total_calls: a.total_calls ?? 0,
+      avg_quality_score: a.avg_quality_score ?? 0,
+      quality_change: 0,
+      hot_leads: a.hot_leads ?? 0,
+      top_call_id: "",
+      areas_for_improvement: Object.keys(a.bottom_parameter_scores ?? {}),
+      strengths: Object.keys(a.top_parameter_scores ?? {}),
+    }),
+  );
+
+  // Map hot_leads → hot_leads_summary
+  const rawHotLeads: any[] = rd.hot_leads ?? [];
+  const hotLeadsSummary: import("@/lib/types").HotLead[] = rawHotLeads.map(
+    (h: any) => ({
+      call_id: h.call_id ?? "",
+      lead_name: h.lead_name ?? "Unknown",
+      lead_phone: h.lead_phone ?? "",
+      intent_score: h.intent_score ?? 0,
+      agent_name: h.agent_name ?? "Unknown",
+      created_at: h.created_at ?? "",
+    }),
+  );
+
+  // Map top_calls
+  const rawTopCalls: any[] = rd.top_calls ?? [];
+  const topCalls = rawTopCalls.map((c: any) => ({
+    call_id: c.call_id ?? "",
+    agent_name: c.agent_name ?? "Unknown",
+    lead_name: c.lead_name ?? "Unknown",
+    overall_score: c.overall_score ?? 0,
+    intent_classification: c.intent_classification ?? "cold",
+  }));
+
+  // Derive areas_for_improvement from the raw data
+  const rawAreas: any[] = rd.areas_for_improvement ?? [];
+  const areasForImprovement = rawAreas.map(
+    (a: any) =>
+      `${a.parameter_name ?? "Unknown"}: ${(a.avg_score ?? 0).toFixed(1)}/10`,
+  );
+
+  // Derive top agent name from highlights
+  const topAgent: string =
+    highlights.top_agent_quality?.agent_name ??
+    agentBreakdowns[0]?.agent_name ??
+    "—";
+
+  // Build key_insights from trends data
+  const keyInsights: string[] = [];
+  const trends = rd.trends ?? {};
+  if (trends.avg_quality_score?.change_pct) {
+    const pct = trends.avg_quality_score.change_pct;
+    keyInsights.push(
+      pct >= 0
+        ? `Quality score improved by ${pct}% vs last week`
+        : `Quality score decreased by ${Math.abs(pct)}% vs last week`,
+    );
+  }
+  if (trends.hot_leads_count?.change) {
+    const change = trends.hot_leads_count.change;
+    if (change > 0) keyInsights.push(`${change} more hot leads than last week`);
+    else if (change < 0)
+      keyInsights.push(`${Math.abs(change)} fewer hot leads than last week`);
+  }
+  if (highlights.top_agent_quality) {
+    keyInsights.push(
+      `Top performer: ${highlights.top_agent_quality.agent_name} (avg ${highlights.top_agent_quality.avg_quality_score})`,
+    );
+  }
+
+  return {
+    id: raw.id,
+    tenant_id: raw.tenant_id,
+    week_start: raw.week_start,
+    week_end: raw.week_end,
+    status: raw.status,
+    summary: {
+      total_calls: summary.total_calls ?? 0,
+      avg_quality_score: summary.avg_quality_score ?? 0,
+      quality_change: trends.avg_quality_score?.change_pct ?? 0,
+      hot_leads: summary.hot_leads_count ?? 0,
+      top_agent: topAgent,
+      areas_for_improvement: areasForImprovement,
+    },
+    agent_breakdowns: agentBreakdowns,
+    top_calls: topCalls,
+    hot_leads_summary: hotLeadsSummary,
+    key_insights: keyInsights,
+    created_at: raw.created_at,
+  };
+}
+
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 export async function getWeeklyReports(): Promise<WeeklyReportListItem[]> {
-  const res = await api.get<WeeklyReportListItem[]>("/reports/weekly");
-  return res.data;
+  const res = await api.get("/reports/weekly");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (res.data as any[]).map(_mapReportListItem);
 }
 
 export async function getWeeklyReport(id: string): Promise<WeeklyReport> {
-  const res = await api.get<WeeklyReport>(`/reports/weekly/${id}`);
-  return res.data;
+  const res = await api.get(`/reports/weekly/${id}`);
+  return _mapReportDetail(res.data);
 }
 
 export async function generateWeeklyReport(
   data: GenerateWeeklyReportRequest,
 ): Promise<WeeklyReportListItem> {
-  const res = await api.post<WeeklyReportListItem>("/reports/weekly", data);
-  return res.data;
+  const res = await api.post("/reports/weekly", data);
+  return _mapReportListItem(res.data);
 }
 
 export default api;

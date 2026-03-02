@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
-from app.schemas.auth import LoginRequest, Token
+from app.schemas.auth import AuthResponse, AuthTokens, LoginRequest, Token
 from app.schemas.tenant import TenantResponse
 from app.schemas.user import UserCreate, UserResponse
 from app.services.auth import (
@@ -78,13 +78,13 @@ class TenantSetupResponse(BaseModel):
 
 @router.post(
     "/login",
-    response_model=Token,
+    response_model=AuthResponse,
     summary="Authenticate and obtain a JWT token",
 )
 def login(
     body: LoginRequest,
     db: Annotated[Session, Depends(get_db)],
-) -> Token:
+) -> AuthResponse:
     """Validate email and password, then return a signed JWT access token.
 
     The token embeds the user ID, tenant ID, and role as claims.
@@ -108,15 +108,22 @@ def login(
             detail="User account is deactivated",
         )
 
-    access_token = create_access_token(
-        data={
-            "sub": str(user.id),
-            "tenant_id": str(user.tenant_id),
-            "role": user.role.value if hasattr(user.role, "value") else str(user.role),
-        }
-    )
+    token_data = {
+        "sub": str(user.id),
+        "tenant_id": str(user.tenant_id),
+        "role": user.role.value if hasattr(user.role, "value") else str(user.role),
+    }
+    access_token = create_access_token(data=token_data)
+    refresh_token = create_access_token(data={**token_data, "type": "refresh"})
 
-    return Token(access_token=access_token, token_type="bearer")
+    return AuthResponse(
+        user=UserResponse.model_validate(user),
+        tokens=AuthTokens(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------

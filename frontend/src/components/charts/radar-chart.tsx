@@ -1,4 +1,3 @@
-import * as React from "react";
 import {
   RadarChart as RechartsRadarChart,
   Radar,
@@ -36,9 +35,9 @@ function CustomTooltip({
   const data = payload[0];
   return (
     <div className="rounded-lg border border-slate-700 bg-slate-900 p-2 shadow-lg">
-      <p className="text-xs text-slate-400">{data.payload?.axis}</p>
+      <p className="text-xs text-slate-400">{data?.payload?.axis}</p>
       <p className="text-sm font-medium text-white">
-        {data.value}/10
+        {data?.value}/10
       </p>
     </div>
   );
