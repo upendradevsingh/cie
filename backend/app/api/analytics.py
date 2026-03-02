@@ -751,3 +751,49 @@ def leaderboard(
         )
         for idx, row in enumerate(rows)
     ]
+
+
+# ---------------------------------------------------------------------------
+# GET /analytics/correlations
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/correlations",
+    summary="Quality parameter and intent signal correlations",
+)
+async def correlation_analysis(
+    db: Annotated[Session, Depends(get_db_with_tenant)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    period_days: int = Query(
+        default=30,
+        ge=7,
+        le=90,
+        description="Number of days of historical data to analyze",
+    ),
+    min_sample_size: int = Query(
+        default=10,
+        ge=5,
+        le=100,
+        description="Minimum calls required for correlation",
+    ),
+) -> Dict:
+    """Analyze correlations between quality parameters/intent signals and outcomes.
+
+    Identifies which behaviors and signals correlate with hot leads vs cold leads.
+    Returns actionable insights on what drives conversions.
+
+    Requires at least ``min_sample_size`` completed calls in the period.
+    """
+    set_tenant_context(db, current_user.tenant_id)
+
+    from app.services.analytics import CorrelationAnalyzer
+
+    analyzer = CorrelationAnalyzer(db)
+    results = await analyzer.analyze(
+        tenant_id=current_user.tenant_id,
+        period_days=period_days,
+        min_sample_size=min_sample_size,
+    )
+
+    return results
