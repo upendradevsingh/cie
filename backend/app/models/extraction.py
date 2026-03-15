@@ -2,7 +2,9 @@ import uuid
 from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB
+from app.models.base import GUID
+from sqlalchemy import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -12,10 +14,10 @@ class Extraction(TimestampMixin, Base):
     __tablename__ = "extractions"
 
     conversation_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("conversations.id"), nullable=False, index=True
+        GUID(), ForeignKey("conversations.id"), nullable=False, index=True
     )
     tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False, index=True
+        GUID(), nullable=False, index=True
     )
 
     # Core
@@ -24,7 +26,7 @@ class Extraction(TimestampMixin, Base):
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
 
     # Attribution
-    attributed_to: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    attributed_to: Mapped[Optional[dict]] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # Evidence
     evidence: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -35,7 +37,7 @@ class Extraction(TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(20), default="ACTIVE", nullable=False)
 
     # Profile-specific attributes (extensible via JSONB)
-    attributes: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    attributes: Mapped[dict] = mapped_column(JSON().with_variant(JSONB, "postgresql"), default=dict, nullable=False)
 
     # Correction tracking
     corrected: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

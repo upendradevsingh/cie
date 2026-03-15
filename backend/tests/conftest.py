@@ -2,12 +2,11 @@
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Generator
-from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 
 from app.config import settings
@@ -15,13 +14,19 @@ from app.models.base import Base
 from app.main import app
 from app.db.session import get_db_with_tenant, get_db
 
-# Use SQLite for tests
+# Use SQLite for tests with UUID support
 TEST_DATABASE_URL = "sqlite:///./test_cie.db"
 
 test_engine = create_engine(
     TEST_DATABASE_URL,
     connect_args={"check_same_thread": False},
 )
+
+# Register UUID adapter for SQLite
+import sqlite3
+sqlite3.register_adapter(uuid.UUID, lambda u: str(u))
+sqlite3.register_converter("UUID", lambda b: uuid.UUID(b.decode()))
+
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 TEST_TENANT_ID = uuid.UUID("12345678-1234-5678-1234-567812345678")
@@ -43,6 +48,11 @@ def db_engine():
     Base.metadata.create_all(bind=test_engine)
     yield test_engine
     Base.metadata.drop_all(bind=test_engine)
+    import os
+    try:
+        os.remove("./test_cie.db")
+    except FileNotFoundError:
+        pass
 
 
 @pytest.fixture

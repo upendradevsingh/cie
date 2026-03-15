@@ -122,6 +122,8 @@ class ExtractionEngine:
         """Parse raw LLM response into ExtractedItem objects."""
         items = []
         for item in raw.get("extractions", []):
+            if item is None:
+                continue
             try:
                 items.append(
                     ExtractedItem(

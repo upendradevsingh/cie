@@ -2,7 +2,9 @@ import uuid
 from typing import Optional
 
 from sqlalchemy import ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB
+from app.models.base import GUID
+from sqlalchemy import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -12,13 +14,13 @@ class Correction(TimestampMixin, Base):
     __tablename__ = "corrections"
 
     extraction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("extractions.id"), nullable=False, index=True
+        GUID(), ForeignKey("extractions.id"), nullable=False, index=True
     )
     tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False, index=True
+        GUID(), nullable=False, index=True
     )
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), nullable=True
+        GUID(), nullable=True
     )
 
     # What was corrected
@@ -33,7 +35,7 @@ class Correction(TimestampMixin, Base):
     )
 
     # Attributes delta (for JSONB field corrections)
-    attributes_delta: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    attributes_delta: Mapped[Optional[dict]] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # Relationships
     extraction: Mapped["Extraction"] = relationship(
