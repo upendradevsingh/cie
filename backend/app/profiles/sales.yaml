@@ -1,0 +1,95 @@
+profile_id: sales
+version: "1.0"
+display_name: "Sales Intelligence"
+description: "Extract quality scores, intent signals, BANT analysis from sales calls"
+
+llm:
+  model: "gpt-4o-mini"
+  temperature: 0.15
+  max_tokens: 4096
+
+extraction_types:
+  QUALITY_SCORE:
+    enabled: true
+    confidence_threshold: 0.80
+    description: "Quality assessment for a scoring parameter"
+    attributes:
+      - name: parameter_name
+        type: string
+      - name: score
+        type: number
+        min: 0
+        max: 10
+      - name: justification
+        type: string
+      - name: weight
+        type: number
+
+  INTENT_SIGNAL:
+    enabled: true
+    confidence_threshold: 0.75
+    description: "A buying intent signal detected in the conversation"
+    attributes:
+      - name: signal_name
+        type: string
+      - name: detected
+        type: boolean
+      - name: details
+        type: string
+
+  PERSONA_BANT:
+    enabled: true
+    confidence_threshold: 0.70
+    description: "BANT (Budget/Authority/Need/Timeline) assessment and persona classification"
+    attributes:
+      - name: budget_score
+        type: number
+        min: 0
+        max: 10
+      - name: authority_score
+        type: number
+        min: 0
+        max: 10
+      - name: need_score
+        type: number
+        min: 0
+        max: 10
+      - name: timeline_score
+        type: number
+        min: 0
+        max: 10
+      - name: persona_type
+        type: string
+
+  OBJECTION:
+    enabled: true
+    confidence_threshold: 0.75
+    description: "An objection raised by the prospect"
+    attributes:
+      - name: category
+        type: string
+      - name: rebuttal
+        type: string
+      - name: resolved
+        type: boolean
+
+  LEAD_INTENT:
+    enabled: true
+    confidence_threshold: 0.80
+    description: "Overall lead intent classification and scoring"
+    attributes:
+      - name: intent_score
+        type: number
+        min: 0
+        max: 100
+      - name: classification
+        type: enum
+        values: [hot, warm, cold]
+      - name: follow_up_urgency
+        type: enum
+        values: [immediate, this_week, next_week, nurture]
+
+summary:
+  enabled: true
+  max_length: 300
+  style: "sales-focused, highlight intent and next steps"

@@ -1,129 +1,72 @@
-"""Tests for authentication endpoints: login, register, tenant setup."""
+"""Tests for JWT validation service."""
+import uuid
+from datetime import datetime, timezone, timedelta
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
+from fastapi import HTTPException
+from jose import jwt
 
-from app.models.user import User, UserRole
-from app.services.auth import hash_password
-from tests.factories import create_admin, create_tenant, create_user
-
-
-class TestCreateTenant:
-    """POST /api/v1/auth/tenant"""
-
-    def test_create_tenant(self, client: TestClient):
-        resp = client.post("/api/v1/auth/tenant", json={
-            "tenant_name": "Acme Inc",
-            "tenant_slug": "acme-inc",
-            "admin_email": "boss@acme.com",
-            "admin_password": "securepass123",
-            "admin_name": "Boss Man",
-        })
-        assert resp.status_code == 201
-        data = resp.json()
-        assert data["tenant"]["slug"] == "acme-inc"
-        assert data["user"]["email"] == "boss@acme.com"
-        assert data["user"]["role"] == "admin"
-        assert "access_token" in data
-        assert data["token_type"] == "bearer"
-
-    def test_create_tenant_duplicate_slug(self, client: TestClient, test_tenant):
-        resp = client.post("/api/v1/auth/tenant", json={
-            "tenant_name": "Duplicate Corp",
-            "tenant_slug": "test-corp",  # same slug as test_tenant
-            "admin_email": "new@dup.com",
-            "admin_password": "securepass123",
-            "admin_name": "New Admin",
-        })
-        assert resp.status_code == 409
+from app.config import settings
+from app.services.auth import decode_token, TokenClaims
 
 
-class TestLogin:
-    """POST /api/v1/auth/login"""
-
-    def test_login_success(self, client: TestClient, test_admin):
-        user, _ = test_admin
-        resp = client.post("/api/v1/auth/login", json={
-            "email": "admin@testcorp.com",
-            "password": "adminpassword123",
-        })
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "access_token" in data
-        assert data["token_type"] == "bearer"
-
-    def test_login_wrong_password(self, client: TestClient, test_admin):
-        resp = client.post("/api/v1/auth/login", json={
-            "email": "admin@testcorp.com",
-            "password": "wrongpassword",
-        })
-        assert resp.status_code == 401
-
-    def test_login_nonexistent_email(self, client: TestClient):
-        resp = client.post("/api/v1/auth/login", json={
-            "email": "nobody@nowhere.com",
-            "password": "somepassword123",
-        })
-        assert resp.status_code == 401
-
-    def test_deactivated_user_cannot_login(
-        self, client: TestClient, db_session: Session, test_tenant
-    ):
-        user = create_user(
-            db_session, test_tenant,
-            email="inactive@testcorp.com",
-            full_name="Inactive User",
-            password="inactivepass123",
-            is_active=False,
-        )
-        db_session.commit()
-
-        resp = client.post("/api/v1/auth/login", json={
-            "email": "inactive@testcorp.com",
-            "password": "inactivepass123",
-        })
-        assert resp.status_code == 403
+def make_token(payload: dict) -> str:
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
-class TestRegister:
-    """POST /api/v1/auth/register"""
-
-    def test_register_new_user(self, client: TestClient, test_tenant, test_admin):
-        """Register a new agent user."""
-        resp = client.post("/api/v1/auth/register", json={
-            "email": "newagent@testcorp.com",
-            "full_name": "New Agent",
-            "role": "agent",
-            "password": "newagentpass123",
-        })
-        assert resp.status_code == 201
-        data = resp.json()
-        assert data["email"] == "newagent@testcorp.com"
-        assert data["role"] == "agent"
-
-    def test_register_duplicate_email(self, client: TestClient, test_admin):
-        """Cannot register with an existing email."""
-        resp = client.post("/api/v1/auth/register", json={
-            "email": "admin@testcorp.com",
-            "full_name": "Duplicate",
-            "role": "agent",
-            "password": "duplicatepass123",
-        })
-        assert resp.status_code == 409
+def test_valid_token_decodes_correctly():
+    tenant_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    token = make_token({
+        "tenant_id": str(tenant_id),
+        "user_id": str(user_id),
+        "sub": "test",
+        "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+    })
+    claims = decode_token(token)
+    assert claims.tenant_id == tenant_id
+    assert claims.user_id == user_id
 
 
-class TestMe:
-    """GET /api/v1/auth/me"""
+def test_expired_token_raises_401():
+    token = make_token({
+        "tenant_id": str(uuid.uuid4()),
+        "exp": datetime.now(timezone.utc) - timedelta(hours=1),  # Expired
+    })
+    with pytest.raises(HTTPException) as exc_info:
+        decode_token(token)
+    assert exc_info.value.status_code == 401
 
-    def test_get_me(self, client: TestClient, test_admin):
-        user, headers = test_admin
-        resp = client.get("/api/v1/auth/me", headers=headers)
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["email"] == "admin@testcorp.com"
-        assert data["role"] == "admin"
 
-    def test_get_me_unauthenticated(self, client: TestClient):
-        resp = client.get("/api/v1/auth/me")
-        assert resp.status_code == 401
+def test_wrong_secret_raises_401():
+    token = jwt.encode(
+        {"tenant_id": str(uuid.uuid4()), "exp": datetime.now(timezone.utc) + timedelta(hours=1)},
+        "wrong_secret",
+        algorithm="HS256",
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        decode_token(token)
+    assert exc_info.value.status_code == 401
+
+
+def test_missing_tenant_id_raises_401():
+    token = make_token({
+        "user_id": str(uuid.uuid4()),
+        "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+    })
+    with pytest.raises(HTTPException) as exc_info:
+        decode_token(token)
+    assert exc_info.value.status_code == 401
+    assert "tenant_id" in exc_info.value.detail
+
+
+def test_token_without_user_id_is_valid():
+    """Tokens without user_id are valid (service-to-service calls)."""
+    tenant_id = uuid.uuid4()
+    token = make_token({
+        "tenant_id": str(tenant_id),
+        "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+    })
+    claims = decode_token(token)
+    assert claims.tenant_id == tenant_id
+    assert claims.user_id is None

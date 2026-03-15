@@ -1,140 +1,79 @@
 version: "3.9"
 
-# ============================================================================
-# SalesLens — Docker Compose
-# ============================================================================
-# One-command startup:
-#   cp .env.example .env   # then edit .env with your API keys
-#   docker-compose up -d
-#
-# Services:
-#   app       — FastAPI backend (port 8000)
-#   worker    — Celery background task worker
-#   postgres  — PostgreSQL 16 database
-#   redis     — Redis 7 (Celery broker + cache)
-#   frontend  — React frontend (port 3000)
-# ============================================================================
-
 services:
-  # ── PostgreSQL ─────────────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
-    restart: unless-stopped
     environment:
-      POSTGRES_USER: saleslens
-      POSTGRES_PASSWORD: saleslens_password
-      POSTGRES_DB: saleslens
+      POSTGRES_DB: cie
+      POSTGRES_USER: cie
+      POSTGRES_PASSWORD: cie
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U saleslens -d saleslens"]
+      test: ["CMD-SHELL", "pg_isready -U cie -d cie"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
 
-  # ── Redis ──────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
-      timeout: 5s
+      timeout: 3s
       retries: 5
-      start_period: 5s
 
-  # ── FastAPI Backend ────────────────────────────────────────────────────────
-  app:
+  cie-api:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    restart: unless-stopped
     ports:
-      - "6901:8000"
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://cie:cie@postgres:5432/cie
+      - REDIS_URL=redis://redis:6379/0
     env_file:
       - .env
-    environment:
-      DATABASE_URL: postgresql://saleslens:saleslens_password@postgres:5432/saleslens
-      REDIS_URL: redis://redis:6379/0
-    volumes:
-      - upload_data:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - upload_data:/app/uploads
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
-    command: >
-      uvicorn app.main:app
-      --host 0.0.0.0
-      --port 8000
-      --workers 4
-      --log-level info
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 
-  # ── Celery Worker ──────────────────────────────────────────────────────────
-  worker:
+  cie-worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://cie:cie@postgres:5432/cie
+      - REDIS_URL=redis://redis:6379/0
     env_file:
       - .env
-    environment:
-      DATABASE_URL: postgresql://saleslens:saleslens_password@postgres:5432/saleslens
-      REDIS_URL: redis://redis:6379/0
-    volumes:
-      - upload_data:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      app:
-        condition: service_healthy
-    command: >
-      celery -A app.tasks worker
-      --loglevel=info
-      --concurrency=4
-      --max-tasks-per-child=100
-      -Q saleslens,default,transcription,analysis,reports
-    healthcheck:
-      test: ["CMD-SHELL", "celery -A app.tasks inspect ping --timeout 10"]
-      interval: 60s
-      timeout: 15s
-      retries: 3
-      start_period: 30s
-
-  # ── React Frontend ─────────────────────────────────────────────────────────
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: http://localhost:6901
-    restart: unless-stopped
-    ports:
-      - "6900:80"
-    depends_on:
-      app:
-        condition: service_healthy
+    volumes:
+      - upload_data:/app/uploads
+    command: celery -A app.tasks worker --loglevel=info --concurrency=4 -Q cie,default
 
 volumes:
   postgres_data:
-    driver: local
   redis_data:
-    driver: local
   upload_data:
-    driver: local

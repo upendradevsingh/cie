@@ -1,76 +1,47 @@
-"""Application configuration loaded from environment variables."""
-
-from typing import List, Optional
-
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings
+from pydantic import Field
+from pathlib import Path
 
 
 class Settings(BaseSettings):
-    """Global application settings.
-
-    All values are read from environment variables or a .env file located
-    in the project root.  Sensible defaults are provided where possible so
-    that the application can start in a development environment with minimal
-    configuration.
-    """
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore",
-    )
-
-    # ── Application ──────────────────────────────────────────────────────
-    APP_NAME: str = "SalesLens"
-    APP_VERSION: str = "0.1.0"
+    APP_NAME: str = "CIE"
+    APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
 
-    # ── Database ─────────────────────────────────────────────────────────
-    DATABASE_URL: str = "postgresql://saleslens:saleslens@localhost:5432/saleslens"
+    # Database
+    DATABASE_URL: str = "postgresql://cie:cie@localhost:5432/cie"
 
-    # ── Redis / Celery ───────────────────────────────────────────────────
+    # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    # ── Auth / JWT ───────────────────────────────────────────────────────
-    SECRET_KEY: str = "change-me-in-production-use-a-long-random-string"
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
+    # JWT validation (shared secret from calling service)
+    JWT_SECRET: str = "changeme"
+    JWT_ALGORITHM: str = "HS256"
 
-    # ── Transcription ────────────────────────────────────────────────────
+    # Transcription
     DEEPGRAM_API_KEY: str = ""
-    TRANSCRIPTION_PROVIDER: str = "deepgram"  # deepgram | whisper
+    TRANSCRIPTION_PROVIDER: str = "deepgram"
 
-    # ── LLM / Analysis ───────────────────────────────────────────────────
+    # LLM
     OPENAI_API_KEY: str = ""
-    LLM_PROVIDER: str = "openai"
     LLM_MODEL: str = "gpt-4o-mini"
+    LLM_FALLBACK_MODEL: str = "gpt-4o"
 
-    # ── File uploads ─────────────────────────────────────────────────────
-    UPLOAD_DIR: str = "./uploads"
+    # Storage
+    UPLOAD_DIR: str = "/app/uploads"
     MAX_FILE_SIZE_MB: int = 100
+    S3_BUCKET: str = ""
+    S3_REGION: str = "us-east-1"
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
 
-    # ── S3 (optional – leave blank to use local storage) ─────────────────
-    S3_BUCKET: Optional[str] = None
-    S3_REGION: Optional[str] = None
-    AWS_ACCESS_KEY_ID: Optional[str] = None
-    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    # Profiles
+    PROFILES_DIR: str = str(Path(__file__).parent / "profiles")
 
-    # ── CORS ─────────────────────────────────────────────────────────────
-    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
+    # CORS
+    CORS_ORIGINS: list[str] = ["*"]
 
-    # ── Derived helpers ──────────────────────────────────────────────────
-    @property
-    def max_file_size_bytes(self) -> int:
-        return self.MAX_FILE_SIZE_MB * 1024 * 1024
-
-    @property
-    def celery_broker_url(self) -> str:
-        return self.REDIS_URL
-
-    @property
-    def celery_result_backend(self) -> str:
-        return self.REDIS_URL
+    model_config = {"env_file": ".env", "case_sensitive": True, "extra": "ignore"}
 
 
 settings = Settings()

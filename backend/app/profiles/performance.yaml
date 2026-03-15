@@ -1,0 +1,111 @@
+profile_id: performance
+version: "1.0"
+display_name: "Performance Management"
+description: "Extract commitments, blockers, feedback, and sentiment from 1:1s, check-ins, and team meetings"
+
+llm:
+  model: "gpt-4o-mini"
+  temperature: 0.15
+  max_tokens: 2048
+  fallback_model: "gpt-4o"
+
+extraction_types:
+  COMMITMENT:
+    enabled: true
+    confidence_threshold: 0.80
+    description: "A specific promise or commitment made by a participant"
+    prompt_hint: "Look for personal ownership (I will, I'll, Let me) + specific deliverable. Exclude vague aspirations."
+    attributes:
+      - name: deadline
+        type: date
+        required: false
+      - name: specificity
+        type: enum
+        values: [low, medium, high]
+      - name: owner_id
+        type: string
+        required: false
+
+  BLOCKER:
+    enabled: true
+    confidence_threshold: 0.75
+    description: "Something preventing progress on work"
+    attributes:
+      - name: severity
+        type: enum
+        values: [low, medium, high, critical]
+      - name: blocked_by
+        type: string
+      - name: status
+        type: enum
+        values: [open, resolved]
+
+  FEEDBACK:
+    enabled: true
+    confidence_threshold: 0.70
+    description: "Feedback given about a person's performance or behavior"
+    attributes:
+      - name: recipient
+        type: string
+      - name: sentiment
+        type: enum
+        values: [positive, constructive, negative]
+      - name: competency
+        type: string
+
+  GOAL_UPDATE:
+    enabled: true
+    confidence_threshold: 0.70
+    description: "Implicit or explicit progress update on a tracked goal"
+    attributes:
+      - name: progress_pct
+        type: number
+        required: false
+      - name: direction
+        type: enum
+        values: [on_track, at_risk, behind, completed]
+
+  ACTION_ITEM:
+    enabled: true
+    confidence_threshold: 0.75
+    description: "A task or action that needs to be done"
+    attributes:
+      - name: assignee
+        type: string
+      - name: due_date
+        type: date
+        required: false
+      - name: priority
+        type: enum
+        values: [low, medium, high]
+
+  SENTIMENT:
+    enabled: true
+    confidence_threshold: 0.60
+    description: "Overall emotional tone and engagement level"
+    attributes:
+      - name: score
+        type: number
+        min: 1
+        max: 5
+      - name: indicators
+        type: list
+      - name: energy_level
+        type: enum
+        values: [low, medium, high]
+
+  DECISION:
+    enabled: true
+    confidence_threshold: 0.80
+    description: "A decision that was made during the conversation"
+    attributes:
+      - name: decided_by
+        type: string
+      - name: impact
+        type: enum
+        values: [low, medium, high]
+
+summary:
+  enabled: true
+  max_length: 200
+  style: "concise, action-oriented"
