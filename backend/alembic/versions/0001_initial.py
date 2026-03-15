@@ -15,16 +15,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Enable uuid-ossp extension
     op.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
 
-    # Create conversationstatus enum
-    op.execute(
-        "CREATE TYPE conversationstatus AS ENUM "
-        "('pending', 'transcribing', 'extracting', 'completed', 'failed')"
-    )
-
-    # conversations table
     op.create_table(
         "conversations",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("uuid_generate_v4()")),
@@ -38,7 +30,7 @@ def upgrade() -> None:
         sa.Column("transcript_segments", postgresql.JSONB, nullable=True),
         sa.Column("language", sa.String(10), nullable=False, server_default="en"),
         sa.Column("profile_id", sa.String(50), nullable=False),
-        sa.Column("status", sa.Enum("pending", "transcribing", "extracting", "completed", "failed", name="conversationstatus"), nullable=False, server_default="pending"),
+        sa.Column("status", sa.String(20), nullable=False, server_default="pending"),
         sa.Column("error_message", sa.Text, nullable=True),
         sa.Column("processing_time_ms", sa.Integer, nullable=True),
         sa.Column("participants", postgresql.JSONB, nullable=False, server_default="[]"),
@@ -49,7 +41,6 @@ def upgrade() -> None:
     )
     op.create_index("ix_conversations_tenant_id", "conversations", ["tenant_id"])
 
-    # extractions table
     op.create_table(
         "extractions",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("uuid_generate_v4()")),
@@ -72,7 +63,6 @@ def upgrade() -> None:
     op.create_index("ix_extractions_conversation_id", "extractions", ["conversation_id"])
     op.create_index("ix_extractions_tenant_id", "extractions", ["tenant_id"])
 
-    # corrections table
     op.create_table(
         "corrections",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("uuid_generate_v4()")),
@@ -96,4 +86,3 @@ def downgrade() -> None:
     op.drop_table("corrections")
     op.drop_table("extractions")
     op.drop_table("conversations")
-    op.execute("DROP TYPE IF EXISTS conversationstatus")

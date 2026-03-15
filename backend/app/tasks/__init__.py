@@ -9,6 +9,7 @@ celery_app = Celery(
     "cie",
     broker=REDIS_URL,
     backend=REDIS_URL,
+    include=["app.tasks.process_conversation"],
 )
 
 celery_app.conf.update(
@@ -21,6 +22,5 @@ celery_app.conf.update(
     task_time_limit=900,
     worker_prefetch_multiplier=1,
     task_acks_late=True,
+    broker_connection_retry_on_startup=True,
 )
-
-celery_app.autodiscover_tasks(["app.tasks"])
