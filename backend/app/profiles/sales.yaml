@@ -4,7 +4,7 @@ display_name: "Sales Intelligence"
 description: "Extract quality scores, intent signals, BANT analysis from sales calls"
 
 llm:
-  model: "gpt-4o-mini"
+  model: "gpt-5-mini"
   temperature: 0.15
   max_tokens: 4096
 

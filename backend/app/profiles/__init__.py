@@ -31,7 +31,7 @@ class ExtractionTypeConfig(BaseModel):
 
 
 class ProfileLLM(BaseModel):
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-5-mini"
     temperature: float = 0.15
     max_tokens: int = 2048
     fallback_model: Optional[str] = None

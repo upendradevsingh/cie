@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # JWT validation (shared secret from calling service)
-    JWT_SECRET: str = "changeme"
+    JWT_SECRET: str  # required — app will fail to start without this
     JWT_ALGORITHM: str = "HS256"
 
     # Transcription
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     # LLM
     OPENAI_API_KEY: str = ""
-    LLM_MODEL: str = "gpt-4o-mini"
+    LLM_MODEL: str = "gpt-5-mini"
     LLM_FALLBACK_MODEL: str = "gpt-4o"
 
     # Storage

@@ -12,9 +12,9 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: saleslens_test
+          POSTGRES_USER: cie_test
           POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: saleslens_test
+          POSTGRES_DB: cie_test
         ports: ['5432:5432']
         options: >-
           --health-cmd pg_isready
@@ -38,11 +38,11 @@ jobs:
           pip install pytest pytest-asyncio pytest-cov pytest-mock httpx
       - name: Run tests
         env:
-          DATABASE_URL: postgresql://saleslens_test:test_password@localhost:5432/saleslens_test
+          DATABASE_URL: postgresql://cie_test:test_password@localhost:5432/cie_test
           REDIS_URL: redis://localhost:6379/0
-          SECRET_KEY: test-secret-key-for-ci-only
-          OPENAI_API_KEY: sk-test-mock
-          DEEPGRAM_API_KEY: dg-test-mock
+          JWT_SECRET: test-jwt-secret-for-ci-only
+          OPENAI_API_KEY: test-mock-openai-key
+          DEEPGRAM_API_KEY: test-mock-deepgram-key
         run: |
           cd backend
           pytest tests/ -v --tb=short --cov=app --cov-report=term-missing --cov-report=xml

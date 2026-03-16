@@ -1,279 +1,124 @@
 #!/usr/bin/env bash
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# SalesLens — Deploy to EC2 with feat/enhanced-analysis branch
+# CIE — Deploy update to EC2 instance
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Single-port HTTPS deployment with self-signed certificate
-# Nginx routes: /api/* → backend:8000, /* → frontend
+# Pulls latest code and redeploys. Credentials stay in /etc/cie/env.
 #
 # Usage:
-#   ./deploy-to-ec2.sh <EC2_IP> <SSH_KEY_PATH>
+#   ./deploy-to-ec2.sh <PRIVATE_IP> <SSH_KEY_PATH>
+#   ./deploy-to-ec2.sh --ssm <SSH_KEY_PATH>     # reads IP from SSM
 #
 # Example:
-#   ./deploy-to-ec2.sh 98.92.238.232 ~/.ssh/pms-backend-key-1752795223.pem
+#   ./deploy-to-ec2.sh 10.0.1.42 ~/.ssh/pms-backend-key-1752795223.pem
+#   ./deploy-to-ec2.sh --ssm ~/.ssh/pms-backend-key-1752795223.pem
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 set -euo pipefail
 
-EC2_IP="${1:-}"
+REGION="${CIE_REGION:-us-east-1}"
+TARGET_IP="${1:-}"
 SSH_KEY="${2:-}"
 
-if [[ -z "$EC2_IP" ]] || [[ -z "$SSH_KEY" ]]; then
-  echo "Usage: $0 <EC2_IP> <SSH_KEY_PATH>"
+# If --ssm flag, read IP from SSM Parameter Store
+if [[ "$TARGET_IP" == "--ssm" ]]; then
+  SSH_KEY="${2:-}"
+  TARGET_IP=$(aws ssm get-parameter \
+    --region "$REGION" \
+    --name "/cie/private-ip" \
+    --query 'Parameter.Value' \
+    --output text 2>/dev/null) || { echo "ERROR: Could not read /cie/private-ip from SSM"; exit 1; }
+  echo "Read CIE IP from SSM: ${TARGET_IP}"
+fi
+
+if [[ -z "$TARGET_IP" ]] || [[ -z "$SSH_KEY" ]]; then
+  echo "Usage: $0 <PRIVATE_IP|--ssm> <SSH_KEY_PATH>"
   exit 1
 fi
 
 SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  Deploying SalesLens to $EC2_IP"
+echo "  Deploying CIE to $TARGET_IP"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # ─── 1. Pull latest code ──────────────────────────────────────────────
-echo "📥 Pulling feat/enhanced-analysis branch..."
-ssh $SSH_OPTS ubuntu@$EC2_IP 'bash -s' <<'REMOTE_SCRIPT'
+echo "Pulling latest code..."
+ssh $SSH_OPTS ubuntu@$TARGET_IP 'bash -s' <<'REMOTE_SCRIPT'
 set -e
-cd /opt/saleslens
+cd /opt/cie
 git fetch origin
-git checkout feat/enhanced-analysis
-git pull origin feat/enhanced-analysis
+git checkout main
+git pull origin main
 REMOTE_SCRIPT
 
-# ─── 2. Run database migrations ──────────────────────────────────────
-echo "🔄 Running Alembic migrations..."
-ssh $SSH_OPTS ubuntu@$EC2_IP 'bash -s' <<'REMOTE_SCRIPT'
+# ─── 2. Verify credentials (self-heal from SSM if missing) ───────────
+echo "Verifying credentials..."
+ssh $SSH_OPTS ubuntu@$TARGET_IP 'bash -s' <<'REMOTE_SCRIPT'
 set -e
-cd /opt/saleslens
-sudo docker compose exec -T app alembic upgrade head
-REMOTE_SCRIPT
+if [[ ! -f /etc/cie/env ]]; then
+  echo "WARNING: /etc/cie/env not found. Pulling from SSM..."
+  if sudo /usr/local/bin/cie-pull-secrets; then
+    echo "Secrets pulled from SSM successfully."
+  else
+    echo "ERROR: Cannot pull secrets from SSM. Run setup-instance.sh first."
+    exit 1
+  fi
+fi
+echo "Credentials file present ($(sudo stat -c '%a %U:%G' /etc/cie/env))"
 
-# ─── 2.5 Initialize default data ─────────────────────────────────────
-echo "🔧 Initializing default data (prompt templates, etc.)..."
-ssh $SSH_OPTS ubuntu@$EC2_IP 'bash -s' <<'REMOTE_SCRIPT'
-set -e
-cd /opt/saleslens
-sudo docker compose exec -T app python scripts/init_defaults.py || echo "⚠️  Init script not found (expected for older deployments)"
-REMOTE_SCRIPT
-
-# ─── 3. Generate self-signed SSL certificate ─────────────────────────
-echo "🔐 Generating self-signed SSL certificate..."
-ssh $SSH_OPTS ubuntu@$EC2_IP 'bash -s' <<'REMOTE_SCRIPT'
-set -e
-cd /opt/saleslens
-sudo mkdir -p /opt/saleslens/nginx/ssl
-
-if [[ ! -f /opt/saleslens/nginx/ssl/cert.pem ]]; then
-  sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /opt/saleslens/nginx/ssl/key.pem \
-    -out /opt/saleslens/nginx/ssl/cert.pem \
-    -subj "/C=US/ST=State/L=City/O=SalesLens/CN=saleslens.local"
-  echo "✓ SSL certificate generated"
+# Verify SSM SecureString access
+IMDS_TOKEN=$(curl -sX PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 60" 2>/dev/null || true)
+REGION=$(curl -s -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" \
+  http://169.254.169.254/latest/meta-data/placement/region 2>/dev/null || echo "us-east-1")
+if aws ssm get-parameter --region "$REGION" --name "/cie/secrets/jwt-secret" \
+    --with-decryption --query 'Parameter.Value' --output text >/dev/null 2>&1; then
+  echo "SSM SecureString access verified."
 else
-  echo "✓ SSL certificate already exists"
+  echo "WARNING: Cannot decrypt SSM SecureString. Check IAM role has kms:Decrypt."
 fi
 REMOTE_SCRIPT
 
-# ─── 4. Create nginx configuration ───────────────────────────────────
-echo "📝 Creating nginx config..."
-ssh $SSH_OPTS ubuntu@$EC2_IP 'bash -s' <<'REMOTE_SCRIPT'
+# ─── 3. Rebuild and restart via systemd ───────────────────────────────
+echo "Rebuilding and restarting services..."
+ssh $SSH_OPTS ubuntu@$TARGET_IP 'bash -s' <<'REMOTE_SCRIPT'
 set -e
-cd /opt/saleslens
-sudo mkdir -p /opt/saleslens/nginx
+cd /opt/cie
 
-cat > /tmp/nginx.conf <<'NGINX_EOF'
-server {
-    listen 443 ssl http2;
-    server_name _;
+# Rebuild containers with new code
+sudo docker compose -f docker-compose.prod.yml build
 
-    ssl_certificate /etc/nginx/ssl/cert.pem;
-    ssl_certificate_key /etc/nginx/ssl/key.pem;
+# Restart via systemd (reads /etc/cie/env)
+sudo systemctl restart cie
 
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers on;
-
-    client_max_body_size 100M;
-
-    # Backend API
-    location /api/ {
-        proxy_pass http://app:8000/api/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 300s;
-        proxy_connect_timeout 75s;
-    }
-
-    # Health check
-    location /health {
-        proxy_pass http://app:8000/health;
-        proxy_set_header Host $host;
-    }
-
-    # Frontend static files
-    location / {
-        root /usr/share/nginx/html;
-        try_files $uri $uri/ /index.html;
-
-        # Cache static assets
-        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-            expires 1y;
-            add_header Cache-Control "public, immutable";
-        }
-    }
-
-    # Gzip
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-}
-
-# Redirect HTTP to HTTPS (if port 80 is open)
-server {
-    listen 80;
-    server_name _;
-    return 301 https://$host$request_uri;
-}
-NGINX_EOF
-
-sudo mv /tmp/nginx.conf /opt/saleslens/nginx/nginx.conf
-echo "✓ Nginx config created"
-REMOTE_SCRIPT
-
-# ─── 5. Update docker-compose for production ─────────────────────────
-echo "🐳 Updating docker-compose..."
-ssh $SSH_OPTS ubuntu@$EC2_IP 'bash -s' <<'REMOTE_SCRIPT'
-set -e
-cd /opt/saleslens
-
-cat > /tmp/docker-compose.prod.yml <<'COMPOSE_EOF'
-version: "3.9"
-
-services:
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: saleslens
-      POSTGRES_PASSWORD: saleslens_password
-      POSTGRES_DB: saleslens
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U saleslens"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-
-  app:
-    build: ./backend
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql://saleslens:saleslens_password@postgres:5432/saleslens
-      REDIS_URL: redis://redis:6379/0
-    volumes:
-      - upload_data:/app/uploads
-    depends_on:
-      postgres: {condition: service_healthy}
-      redis: {condition: service_healthy}
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
-
-  worker:
-    build: ./backend
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql://saleslens:saleslens_password@postgres:5432/saleslens
-      REDIS_URL: redis://redis:6379/0
-    volumes:
-      - upload_data:/app/uploads
-    depends_on:
-      postgres: {condition: service_healthy}
-      redis: {condition: service_healthy}
-    command: celery -A app.tasks worker --loglevel=info --concurrency=4 --max-tasks-per-child=100
-
-  nginx:
-    image: nginx:alpine
-    restart: unless-stopped
-    ports:
-      - "443:443"
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-      - frontend_build:/usr/share/nginx/html:ro
-    depends_on:
-      - app
-
-  frontend-builder:
-    build: ./frontend
-    volumes:
-      - frontend_build:/app/dist
-
-volumes:
-  postgres_data:
-  redis_data:
-  upload_data:
-  frontend_build:
-COMPOSE_EOF
-
-sudo mv /tmp/docker-compose.prod.yml docker-compose.yml
-echo "✓ docker-compose updated"
-REMOTE_SCRIPT
-
-# ─── 6. Rebuild and restart containers ───────────────────────────────
-echo "🚀 Rebuilding containers..."
-ssh $SSH_OPTS ubuntu@$EC2_IP 'bash -s' <<'REMOTE_SCRIPT'
-set -e
-cd /opt/saleslens
-
-# Rebuild backend + worker with new code
-sudo docker compose up -d --build backend worker
-
-# Wait for backend health
-echo "Waiting for backend..."
-for i in {1..30}; do
-  if sudo docker compose exec -T app curl -sf http://localhost:8000/health >/dev/null 2>&1; then
-    echo "✓ Backend healthy"
+echo "Waiting for API health..."
+for i in $(seq 1 30); do
+  if curl -sf http://localhost:8000/health >/dev/null 2>&1; then
+    echo "API healthy"
     break
+  fi
+  if [ $i -eq 30 ]; then
+    echo "WARNING: Health check did not pass after 60s"
+    sudo docker compose -f docker-compose.prod.yml logs --tail=20 cie-api
+    exit 1
   fi
   sleep 2
 done
-
-# Rebuild frontend
-sudo docker compose build frontend-builder
-sudo docker compose up -d frontend-builder
-sleep 5
-
-# Start nginx
-sudo docker compose up -d nginx
-
-echo "✓ All services running"
 REMOTE_SCRIPT
 
-# ─── 7. Verify deployment ─────────────────────────────────────────────
+# ─── 4. Run migrations ───────────────────────────────────────────────
+echo "Running Alembic migrations..."
+ssh $SSH_OPTS ubuntu@$TARGET_IP 'bash -s' <<'REMOTE_SCRIPT'
+set -e
+cd /opt/cie
+sudo docker compose -f docker-compose.prod.yml exec -T cie-api alembic upgrade head
+REMOTE_SCRIPT
+
+# ─── 5. Verify ───────────────────────────────────────────────────────
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  ✅ Deployment Complete!"
+echo "  Deployment complete!"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "  🌐 SalesLens: https://$EC2_IP"
-echo "  🔐 SSL: Self-signed (browser will warn - accept to proceed)"
-echo ""
-echo "  Useful commands:"
-echo "    ssh $SSH_OPTS ubuntu@$EC2_IP"
-echo "    ssh $SSH_OPTS ubuntu@$EC2_IP 'cd /opt/saleslens && sudo docker compose logs -f'"
+echo "  CIE API: http://$TARGET_IP:8000"
+echo "  Health:  http://$TARGET_IP:8000/health"
 echo ""

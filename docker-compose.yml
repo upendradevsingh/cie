@@ -4,9 +4,9 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: cie
-      POSTGRES_USER: cie
-      POSTGRES_PASSWORD: cie
+      POSTGRES_DB: ${POSTGRES_DB:-cie}
+      POSTGRES_USER: ${POSTGRES_USER:-cie}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cie}
     ports:
       - "5432:5432"
     volumes:
@@ -19,7 +19,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy volatile-lru
     ports:
       - "6379:6379"
     volumes:

@@ -1,181 +1,151 @@
-# SalesLens — Infrastructure
+# CIE — Infrastructure
 
-Deploy SalesLens on a single AWS spot instance with S3 storage for call recordings.
+Deploy CIE on a single AWS spot instance in us-east-1. Private-IP only — PMS discovers CIE via SSM Parameter Store.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  EC2 Spot Instance (t3.medium, Ubuntu 24.04)        │
-│                                                     │
-│  ┌─────────────┐  ┌──────────┐  ┌───────────────┐  │
-│  │  Frontend    │  │  Backend │  │ Celery Worker │  │
-│  │  :3000       │  │  :8000   │  │  (processing) │  │
-│  └─────────────┘  └────┬─────┘  └───────┬───────┘  │
-│                        │                │           │
-│                   ┌────┴────┐     ┌─────┴─────┐    │
-│                   │ Postgres│     │   Redis    │    │
-│                   │  :5432  │     │   :6379    │    │
-│                   └─────────┘     └───────────┘    │
-│                                                     │
-│  30 GB gp3 EBS                                      │
-└──────────────────────┬──────────────────────────────┘
-                       │
-                       ▼
-              ┌─────────────────┐
-              │   S3 Bucket     │
-              │  (recordings)   │
-              └─────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  EC2 Spot Instance (t3.medium, us-east-1d)                  │
+│  Private IP only — no public internet exposure              │
+│                                                             │
+│  ┌──────────┐  ┌───────────────┐                            │
+│  │ CIE API  │  │ Celery Worker │   ← Docker containers      │
+│  │  :8000   │  │  (4 workers)  │                            │
+│  └────┬─────┘  └───────┬───────┘                            │
+│       │                │                                    │
+│  ┌────┴────┐     ┌─────┴─────┐                              │
+│  │Postgres │     │   Redis   │   ← Docker containers        │
+│  └─────────┘     └───────────┘                              │
+│                                                             │
+│  systemd: cie.service + cie-update-ip.service               │
+│  Credentials: /etc/cie/env (root:root, mode 600)            │
+├─────────────────────────────────────────────────────────────┤
+│  EBS Volume (30GB gp3) — persistent across spot stop/start  │
+│  /opt/cie-data/{postgres,redis,uploads}                     │
+└──────────────┬──────────────────────────────────────────────┘
+               │ VPC internal
+               ▼
+┌──────────────────────┐     ┌─────────────────┐
+│  pms-backend-prod    │     │   S3 Bucket     │
+│  (reads /cie/private │     │  cie-recordings │
+│   -ip from SSM)      │     └─────────────────┘
+└──────────────────────┘
 ```
 
-## Prerequisites
+## Service Discovery
 
-- **AWS CLI v2** — installed and configured (`aws configure`)
-- **IAM permissions** — ability to create EC2 instances, security groups, S3 buckets, IAM roles
-- **jq** — `sudo apt install jq` / `brew install jq`
-- **SSH key** — the scripts create one automatically, or set `SALESLENS_KEY_NAME` to reuse an existing key pair
+PMS finds CIE via **SSM Parameter Store** (free, no ALB/EIP needed):
+
+```bash
+# PMS reads CIE address at startup or on-demand
+CIE_URL="http://$(aws ssm get-parameter --name /cie/private-ip --query Parameter.Value --output text):8000"
+```
+
+On spot resume, `cie-update-ip.service` automatically updates the SSM parameter with the new private IP before CIE starts.
+
+## Credential Management
+
+Secrets stored in `/etc/cie/env` on the instance (root:root, mode 600). Loaded by systemd `EnvironmentFile`. Never in the repo.
+
+```bash
+sudo nano /etc/cie/env       # edit
+sudo systemctl restart cie   # apply
+```
 
 ## Quick Start
 
+### Reusing existing resources
+
 ```bash
-# 1. Provision the infrastructure (~2 min)
 cd infra
-chmod +x provision-spot.sh setup-instance.sh teardown.sh
-./provision-spot.sh
 
-# 2. Copy setup script and run on instance
-scp -i saleslens-key.pem setup-instance.sh ubuntu@<PUBLIC_IP>:~
-ssh -i saleslens-key.pem ubuntu@<PUBLIC_IP> 'bash setup-instance.sh <S3_BUCKET>'
+# Use existing EBS, security group, key pair, and IAM profile
+./provision-spot.sh \
+  --ebs-volume vol-023714ea3f5af0da5 \
+  --sg sg-0dde867d87ef01a77 \
+  --key pms-backend-key-1752795223 \
+  --iam-profile saleslens-ec2-profile-b96d39df
 
-# 3. Access SalesLens
-#    API:      http://<PUBLIC_IP>:8000
-#    Frontend: http://<PUBLIC_IP>:3000
+# Connect via SSM (no SSH key needed)
+aws ssm start-session --target <INSTANCE_ID>
+
+# Or SSH from within VPC
+ssh -i ~/.ssh/pms-backend-key-1752795223.pem ubuntu@<PRIVATE_IP>
+
+# Run setup on the instance
+bash setup-instance.sh <S3_BUCKET>
 ```
 
-That's it — three commands to deploy.
+### Fresh provision
+
+```bash
+./provision-spot.sh   # creates everything from scratch
+```
 
 ## Scripts
 
 ### `provision-spot.sh`
 
-Provisions all AWS resources:
-
-| Resource | Details |
-|----------|---------|
-| EC2 Instance | t3.medium spot, Ubuntu 24.04, 30 GB gp3 |
-| Security Group | Ports: 22, 80, 443, 8000, 3000 |
-| S3 Bucket | `saleslens-recordings-<random>`, public access blocked |
-| IAM Role | Scoped to the S3 bucket only |
-| Key Pair | Created if not present |
-
-**Flags:**
-- `--dry-run` — Print configuration without creating anything
-
-**Environment variables:**
-- `SALESLENS_KEY_NAME` — Override the default key pair name (default: `saleslens-key`)
-
-Creates a `saleslens-resources-<suffix>.env` file used by `teardown.sh`.
+| Flag | Description | Example |
+|------|-------------|---------|
+| `--ebs-volume` | Attach existing EBS (must be in same AZ) | `vol-023714ea3f5af0da5` |
+| `--sg` | Reuse existing security group | `sg-0dde867d87ef01a77` |
+| `--key` | Reuse existing key pair | `pms-backend-key-1752795223` |
+| `--iam-profile` | Reuse existing IAM instance profile | `saleslens-ec2-profile-b96d39df` |
+| `--subnet` | Specific subnet | `subnet-abc123` |
+| `--region` | Override region (default: us-east-1) | `ap-south-1` |
+| `--dry-run` | Print plan, create nothing | |
 
 ### `setup-instance.sh`
 
-Run ON the instance after SSH-ing in. Installs Docker, clones the repo, configures `.env`, starts services, runs migrations, and enables auto-restart via systemd.
+Run ON the instance. Installs Docker, clones repo, collects API keys, stores in `/etc/cie/env`, mounts EBS, sets up systemd, starts services.
+
+### `deploy-to-ec2.sh`
+
+Pull latest code and redeploy. Reads CIE IP from SSM or argument.
 
 ```bash
-bash setup-instance.sh <S3_BUCKET_NAME>
+./deploy-to-ec2.sh --ssm ~/.ssh/key.pem          # auto-discover IP
+./deploy-to-ec2.sh 10.0.1.42 ~/.ssh/key.pem      # explicit IP
 ```
-
-You'll be prompted for:
-- Deepgram API key
-- OpenAI API key
 
 ### `teardown.sh`
 
-Clean removal of all provisioned resources:
-
 ```bash
-# Keep S3 data (recordings)
-./teardown.sh saleslens-resources-<suffix>.env
-
-# Also delete S3 bucket and all recordings
-./teardown.sh saleslens-resources-<suffix>.env --delete-data
+./teardown.sh cie-resources-xxx.env               # instance + SSM only (preserves SG, IAM, EBS, S3)
+./teardown.sh cie-resources-xxx.env --delete-all  # everything
 ```
 
-## Cost Estimate
+## Cost (monthly, us-east-1)
 
-Running in `ap-south-1` (Mumbai) on spot pricing:
-
-| Resource | Estimated Cost |
-|----------|---------------|
-| t3.medium spot instance | ~$5-7/month |
-| 30 GB gp3 EBS | ~$2.40/month |
-| S3 storage (10 GB) | ~$0.25/month |
-| Data transfer | ~$0.50/month |
-| **Total** | **~$8-10/month** |
-
-Spot instances save ~60-70% vs on-demand ($0.0068/hr spot vs $0.0208/hr on-demand in ap-south-1).
-
-## Environment Variables
-
-All configuration is in `.env`. Key variables for infrastructure:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `S3_BUCKET` | S3 bucket for recordings | _(empty = local storage)_ |
-| `S3_REGION` | AWS region | _(auto-detected on EC2)_ |
-| `AWS_ACCESS_KEY_ID` | IAM key (not needed with instance role) | _(empty)_ |
-| `AWS_SECRET_ACCESS_KEY` | IAM secret (not needed with instance role) | _(empty)_ |
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://saleslens:saleslens_password@postgres:5432/saleslens` |
-| `REDIS_URL` | Redis connection string | `redis://redis:6379/0` |
-| `DEEPGRAM_API_KEY` | Deepgram Nova-3 API key | **required** |
-| `OPENAI_API_KEY` | OpenAI API key | **required** |
-| `SECRET_KEY` | JWT signing secret | **required** (auto-generated by setup) |
-
-See `.env.example` for the full list with documentation.
+| Resource | Cost |
+|----------|------|
+| t3.medium spot | ~$6-8 |
+| EBS 30GB gp3 | ~$2.40 |
+| S3 (10 GB) | ~$0.23 |
+| SSM Parameter Store | Free |
+| Data transfer (VPC internal) | Free |
+| **Infra total** | **~$9-11/mo** |
+| Deepgram (1K calls) | ~$43 |
+| OpenAI gpt-4o-mini | ~$2-10 |
+| **All-in total** | **~$54-64/mo** |
 
 ## Troubleshooting
 
-### Instance won't start
 ```bash
-# Check spot request status
-aws ec2 describe-spot-instance-requests --region ap-south-1
+# Service status
+sudo systemctl status cie
+sudo systemctl status cie-update-ip
 
-# If capacity unavailable, try a different AZ or instance type
-```
+# Container logs
+cd /opt/cie
+sudo docker compose -f docker-compose.prod.yml logs -f
+sudo docker compose -f docker-compose.prod.yml ps
 
-### Docker services not starting
-```bash
-ssh -i saleslens-key.pem ubuntu@<IP>
-cd /opt/saleslens
-sudo docker compose logs          # view all logs
-sudo docker compose logs backend  # backend only
-sudo docker compose ps            # check container status
-```
+# Check SSM parameter
+aws ssm get-parameter --name /cie/private-ip --region us-east-1
 
-### Health check failing
-```bash
-# Check if backend container is running
-sudo docker compose ps backend
-
-# View backend logs for errors
-sudo docker compose logs --tail=50 backend
-
-# Verify database connection
-sudo docker compose exec backend alembic current
-```
-
-### S3 permission errors
-```bash
-# Verify instance role is attached
-curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/
-
-# Test S3 access
-aws s3 ls s3://<bucket-name>/
-```
-
-### Restarting services
-```bash
-cd /opt/saleslens
-sudo docker compose restart           # restart all
-sudo docker compose restart backend   # restart backend only
-sudo systemctl restart saleslens      # restart via systemd
+# Verify credentials
+sudo stat /etc/cie/env
 ```
