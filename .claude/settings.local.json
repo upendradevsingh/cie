@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(aws ec2:*)",
+      "Bash(aws iam:*)",
+      "Bash(python:*)",
+      "Bash(aws ssm:*)",
+      "Bash(ssh:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(docker compose:*)",
+      "Bash(sleep:*)",
+      "Bash(git push:*)",
+      "Bash(cd:*)",
+      "Bash(chmod:*)",
+      "Bash(bash infra/simulate-week.sh localhost:7070 2>&1)",
+      "Bash(echo:*)",
+      "Bash(find:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}

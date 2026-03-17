@@ -45,6 +45,11 @@ async def get_extractions(
             detail=f"Conversation {conversation_id} not found",
         )
 
+    # Return 202 if conversation is still processing — signals "not ready yet"
+    if conversation.status not in ("completed", "failed"):
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=202, content=[])
+
     extractions = (
         db.query(Extraction)
         .filter(

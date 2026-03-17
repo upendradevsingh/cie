@@ -21,7 +21,7 @@ class ExtractionTypeSchema(BaseModel):
 
 
 class ProfileLLMSchema(BaseModel):
-    model: str = "gpt-5-mini"
+    model: str = "gpt-4o"
     temperature: float = 0.15
     max_tokens: int = 2048
     fallback_model: Optional[str] = None

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     # LLM
     OPENAI_API_KEY: str = ""
-    LLM_MODEL: str = "gpt-5-mini"
+    LLM_MODEL: str = "gpt-4o"
     LLM_FALLBACK_MODEL: str = "gpt-4o"
 
     # Storage

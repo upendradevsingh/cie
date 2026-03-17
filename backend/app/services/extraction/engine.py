@@ -98,11 +98,9 @@ class ExtractionEngine:
         """Call OpenAI with retry logic. Returns parsed JSON dict."""
         create_kwargs = dict(
             model=self.model,
-            max_completion_tokens=self.max_tokens,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
         )
-        # Some models (e.g., gpt-5-mini) only support temperature=1
-        if "gpt-5" not in self.model:
-            create_kwargs["temperature"] = self.temperature
 
         # Fresh client per call to avoid stale event loop binding in Celery workers
         client = openai.AsyncOpenAI(api_key=self._api_key)
