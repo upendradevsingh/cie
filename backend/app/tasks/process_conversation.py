@@ -84,12 +84,14 @@ def process_conversation(self, conversation_id: str) -> dict:
 
             import asyncio
             loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
             try:
                 result = loop.run_until_complete(
                     engine.extract(transcript, conversation.participants or [])
                 )
             finally:
                 loop.close()
+                asyncio.set_event_loop(None)
         except Exception as e:
             logger.error("Extraction failed for %s: %s", conversation_id, e)
             conversation.status = ConversationStatus.failed
