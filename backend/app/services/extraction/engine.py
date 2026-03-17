@@ -46,7 +46,8 @@ class ExtractionEngine:
         self.model = profile.llm.model or settings.LLM_MODEL
         self.temperature = profile.llm.temperature
         self.max_tokens = profile.llm.max_tokens
-        self._client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        # Create client lazily per call — AsyncOpenAI binds to event loop on first use
+        self._api_key = settings.OPENAI_API_KEY
         self._last_tokens = 0
 
     async def extract(
@@ -103,7 +104,9 @@ class ExtractionEngine:
         if "gpt-5" not in self.model:
             create_kwargs["temperature"] = self.temperature
 
-        response = await self._client.chat.completions.create(
+        # Fresh client per call to avoid stale event loop binding in Celery workers
+        client = openai.AsyncOpenAI(api_key=self._api_key)
+        response = await client.chat.completions.create(
             **create_kwargs,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
