@@ -7,8 +7,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-cie}
       POSTGRES_USER: ${POSTGRES_USER:-cie}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cie}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -20,8 +18,6 @@ services:
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy volatile-lru
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -34,11 +30,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://cie:cie@postgres:5432/cie
       - REDIS_URL=redis://redis:6379/0
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY:-}
     env_file:
       - .env
     depends_on:
@@ -62,6 +58,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://cie:cie@postgres:5432/cie
       - REDIS_URL=redis://redis:6379/0
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY:-}
     env_file:
       - .env
     depends_on:

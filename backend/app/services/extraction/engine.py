@@ -66,11 +66,8 @@ class ExtractionEngine:
             raise
 
         extractions = self._parse_extractions(raw_json)
-        filtered = [
-            e
-            for e in extractions
-            if e.confidence >= self.profile.get_threshold(e.extraction_type)
-        ]
+        # Store all extractions regardless of confidence — low-confidence items
+        # are valuable for calibration. Clients can filter by threshold if needed.
 
         summary = raw_json.get("summary", "")
         duration_ms = int(time.time() * 1000) - start_ms
@@ -78,13 +75,13 @@ class ExtractionEngine:
         logger.info(
             "Extraction complete: profile=%s extractions=%d tokens=%d ms=%d",
             self.profile.profile_id,
-            len(filtered),
+            len(extractions),
             self._last_tokens,
             duration_ms,
         )
 
         return ExtractionResult(
-            extractions=filtered,
+            extractions=extractions,
             summary=summary,
             model_used=self.model,
             tokens_used=self._last_tokens,
@@ -98,10 +95,16 @@ class ExtractionEngine:
     )
     async def _call_llm(self, prompt: str) -> dict:
         """Call OpenAI with retry logic. Returns parsed JSON dict."""
-        response = await self._client.chat.completions.create(
+        create_kwargs = dict(
             model=self.model,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
+            max_completion_tokens=self.max_tokens,
+        )
+        # Some models (e.g., gpt-5-mini) only support temperature=1
+        if "gpt-5" not in self.model:
+            create_kwargs["temperature"] = self.temperature
+
+        response = await self._client.chat.completions.create(
+            **create_kwargs,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
@@ -120,6 +123,8 @@ class ExtractionEngine:
 
     def _parse_extractions(self, raw: dict) -> list[ExtractedItem]:
         """Parse raw LLM response into ExtractedItem objects."""
+        logger.debug("Raw LLM response keys: %s, extraction count: %d",
+                      list(raw.keys()), len(raw.get("extractions", [])))
         items = []
         for item in raw.get("extractions", []):
             if item is None:

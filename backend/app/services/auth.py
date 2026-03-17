@@ -26,7 +26,11 @@ class TokenClaims(BaseModel):
 
 
 def decode_token(token: str) -> TokenClaims:
-    """Validate JWT signature and extract claims."""
+    """Validate JWT signature and extract claims.
+
+    Accepts both snake_case (tenant_id) and camelCase (tenantId) claim names
+    to support different calling services.
+    """
     try:
         payload = jwt.decode(
             token,
@@ -41,7 +45,8 @@ def decode_token(token: str) -> TokenClaims:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    tenant_id = payload.get("tenant_id")
+    # Accept both snake_case and camelCase claim names
+    tenant_id = payload.get("tenant_id") or payload.get("tenantId")
     if not tenant_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -49,18 +54,30 @@ def decode_token(token: str) -> TokenClaims:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    user_id_raw = payload.get("user_id") or payload.get("userId")
+
     try:
-        return TokenClaims(
-            tenant_id=uuid.UUID(str(tenant_id)),
-            user_id=uuid.UUID(str(payload["user_id"])) if payload.get("user_id") else None,
-            sub=payload.get("sub"),
-        )
-    except (ValueError, KeyError) as e:
+        parsed_tenant_id = uuid.UUID(str(tenant_id))
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid token claims: {e}",
+            detail=f"Invalid tenant_id (must be UUID): {e}",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # user_id is optional and may not be a UUID (e.g., service accounts)
+    parsed_user_id = None
+    if user_id_raw:
+        try:
+            parsed_user_id = uuid.UUID(str(user_id_raw))
+        except ValueError:
+            logger.debug("user_id '%s' is not a UUID — treating as service account", user_id_raw)
+
+    return TokenClaims(
+        tenant_id=parsed_tenant_id,
+        user_id=parsed_user_id,
+        sub=payload.get("sub"),
+    )
 
 
 def get_token_claims(

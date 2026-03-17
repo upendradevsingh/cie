@@ -104,3 +104,4 @@ logs/
 *.tmp
 *.temp
 .terraform/
+docker-compose.override.yml
