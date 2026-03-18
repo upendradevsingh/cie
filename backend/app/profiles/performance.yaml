@@ -35,6 +35,18 @@ extraction_types:
       - Buy-in signals: "I'm on board", "Let's do it", vs ambiguity: "We'll see",
         "I'll try", "Maybe" (which indicate lack of commitment)
       Exclude vague aspirations ("We should probably...") — these are NOT commitments.
+
+      CRITICAL — DATES AND NAMES:
+      - ALWAYS extract deadlines even from noisy/messy transcripts. "Friday",
+        "next week", "by Wednesday", "tomorrow", "within a week", "end of sprint"
+        are ALL valid deadlines — set the deadline attribute.
+      - ALWAYS extract the person's name who made the commitment. Look for names
+        mentioned in surrounding context — "Dinesh and Krish can do that",
+        "let's build the engine" (speaker = owner). Set owner_id to the name.
+      - If a date is relative ("next Friday"), convert to the actual date using
+        the meeting date context if available.
+      - Extract EVERY commitment, not just the most obvious one. A meeting may
+        have 5-10 commitments — capture them all.
     attributes:
       - name: deadline
         type: date
@@ -95,6 +107,17 @@ extraction_types:
       - COMMITMENT: self-volunteered ("I will...", "Let me...")
       Flag action items that lack a due date or clear owner — these are
       accountability gaps (Lencioni).
+
+      CRITICAL — DATES AND NAMES:
+      - ALWAYS set assignee to the person's actual name (e.g., "Dinesh", "Krish"),
+        not generic labels like "team" or "engineer".
+      - ALWAYS extract due_date from context: "tomorrow", "Friday", "next week",
+        "by Wednesday", "within a week" are all valid dates. Convert relative
+        dates using the meeting date if available.
+      - Extract EACH action item separately. "Dinesh to send notes and Krish to
+        publish HLD" is TWO action items, not one.
+      - If multiple people are assigned the same task, create one action item
+        per person with their name as assignee.
     attributes:
       - name: assignee
         type: string
