@@ -1,7 +1,10 @@
 profile_id: performance
-version: "1.0"
+version: "2.0"
 display_name: "Performance Management"
-description: "Extract commitments, blockers, feedback, and sentiment from 1:1s, check-ins, and team meetings"
+description: >
+  Extract commitments, blockers, feedback, and sentiment from 1:1s, check-ins,
+  and team meetings. Feedback classification based on Stone & Heen's "Thanks for
+  the Feedback" framework (Appreciation, Coaching, Evaluation).
 
 llm:
   model: "gpt-4o"
@@ -14,7 +17,9 @@ extraction_types:
     enabled: true
     confidence_threshold: 0.80
     description: "A specific promise or commitment made by a participant"
-    prompt_hint: "Look for personal ownership (I will, I'll, Let me) + specific deliverable. Exclude vague aspirations."
+    prompt_hint: >
+      Look for personal ownership (I will, I'll, Let me) + specific deliverable.
+      Exclude vague aspirations. A commitment needs WHO + WHAT + WHEN.
     attributes:
       - name: deadline
         type: date
@@ -30,6 +35,10 @@ extraction_types:
     enabled: true
     confidence_threshold: 0.75
     description: "Something preventing progress on work"
+    prompt_hint: >
+      Look for dependency bottlenecks, missing approvals, resource constraints,
+      or external team delays. Distinguish between blockers (cannot proceed)
+      and risks (might slow down).
     attributes:
       - name: severity
         type: enum
@@ -39,24 +48,76 @@ extraction_types:
       - name: status
         type: enum
         values: [open, resolved]
+      - name: blocker_type
+        type: enum
+        values: [dependency, resource, approval, technical, external]
 
   FEEDBACK:
     enabled: true
-    confidence_threshold: 0.70
-    description: "Feedback given about a person's performance or behavior"
+    confidence_threshold: 0.65
+    description: >
+      Feedback given about a person's performance, behavior, or contribution.
+      Classify using Stone & Heen's three types: appreciation (recognition/thanks),
+      coaching (advice to improve/grow), or evaluation (rating/ranking/judgment).
+    prompt_hint: >
+      IMPORTANT: Classify every feedback instance into exactly one of three types
+      from "Thanks for the Feedback" by Stone & Heen:
+
+      1. APPRECIATION — Recognition, gratitude, acknowledgment that says "I see you"
+         and "you matter." Examples: "Great work on X", "Thanks for stepping up",
+         "Your contribution to Y was outstanding." The core purpose is motivation
+         and human connection.
+
+      2. COACHING — Guidance aimed at helping someone learn, grow, or improve.
+         Can be forward-looking advice, suggestions, or skill development pointers.
+         Examples: "You should try X approach", "Next time consider Y",
+         "Have you thought about Z?" The core purpose is growth.
+
+      3. EVALUATION — Judgment that tells someone where they stand, explicitly or
+         implicitly. Ratings, rankings, comparisons, or assessments against standards.
+         Examples: "You're not meeting expectations on X", "You're one of our
+         strongest engineers", "This is below the bar." The core purpose is
+         assessment and consequences.
+
+      Also identify:
+      - Whether the feedback is based on specific OBSERVATIONS (concrete behaviors,
+        data, outcomes) or vague LABELS ("you're not a team player", "great attitude")
+      - Any BLIND SPOTS surfaced — things the recipient may not see about themselves
+      - Whether the feedback is FORWARD-LOOKING (what to do next) or BACKWARD-LOOKING
+        (what happened)
     attributes:
+      - name: feedback_type
+        type: enum
+        required: true
+        values: [appreciation, coaching, evaluation]
       - name: recipient
+        type: string
+      - name: giver
         type: string
       - name: sentiment
         type: enum
         values: [positive, constructive, negative]
+      - name: specificity
+        type: enum
+        values: [observation, label]
+      - name: direction
+        type: enum
+        values: [forward_looking, backward_looking]
       - name: competency
         type: string
+        required: false
+      - name: blind_spot_surfaced
+        type: boolean
+        required: false
 
   GOAL_UPDATE:
     enabled: true
     confidence_threshold: 0.70
-    description: "Implicit or explicit progress update on a tracked goal"
+    description: "Implicit or explicit progress update on a tracked goal or OKR"
+    prompt_hint: >
+      Look for percentage progress, milestone completions, metric improvements,
+      or status changes. Include both quantitative (12% CTR improvement) and
+      qualitative (on track, at risk) updates.
     attributes:
       - name: progress_pct
         type: number
@@ -64,14 +125,27 @@ extraction_types:
       - name: direction
         type: enum
         values: [on_track, at_risk, behind, completed]
+      - name: metric_name
+        type: string
+        required: false
+      - name: metric_value
+        type: string
+        required: false
 
   ACTION_ITEM:
     enabled: true
     confidence_threshold: 0.75
-    description: "A task or action that needs to be done"
+    description: "A task or action that needs to be done, assigned during conversation"
+    prompt_hint: >
+      Distinguish from COMMITMENTs: an ACTION_ITEM is assigned (by someone to
+      someone), while a COMMITMENT is self-volunteered. Look for "Can you...",
+      "Please...", "We need someone to...", "I'll ask X to...".
     attributes:
       - name: assignee
         type: string
+      - name: assigned_by
+        type: string
+        required: false
       - name: due_date
         type: date
         required: false
@@ -82,7 +156,16 @@ extraction_types:
   SENTIMENT:
     enabled: true
     confidence_threshold: 0.60
-    description: "Overall emotional tone and engagement level"
+    description: >
+      Overall emotional tone, engagement level, and psychological safety indicators.
+      Detect both explicit emotions and implicit signals.
+    prompt_hint: >
+      Look for engagement signals (asking questions, volunteering, energy),
+      disengagement signals (short answers, deflection, silence), and
+      psychological safety cues (willingness to raise concerns, admit mistakes,
+      ask for help). Also note any IDENTITY TRIGGERS from Stone & Heen — moments
+      where feedback threatens someone's self-image causing defensiveness,
+      shutdown, or emotional reaction.
     attributes:
       - name: score
         type: number
@@ -93,19 +176,92 @@ extraction_types:
       - name: energy_level
         type: enum
         values: [low, medium, high]
+      - name: psychological_safety
+        type: enum
+        values: [safe, guarded, defensive]
+        required: false
+      - name: identity_trigger_detected
+        type: boolean
+        required: false
 
   DECISION:
     enabled: true
     confidence_threshold: 0.80
-    description: "A decision that was made during the conversation"
+    description: "A decision that was explicitly made or agreed upon during the conversation"
+    prompt_hint: >
+      Look for explicit agreement ("Let's go with X", "Decided: Y", "We'll do Z").
+      Capture who made the decision and what alternatives were considered.
     attributes:
       - name: decided_by
         type: string
       - name: impact
         type: enum
         values: [low, medium, high]
+      - name: alternatives_considered
+        type: list
+        required: false
+
+  COACHING_MOMENT:
+    enabled: true
+    confidence_threshold: 0.70
+    description: >
+      A moment where someone provides developmental guidance, mentoring, or
+      skill-building advice. Distinct from general feedback — coaching moments
+      are specifically aimed at helping someone grow.
+    prompt_hint: >
+      From Stone & Heen: coaching is about helping someone learn and grow.
+      Look for:
+      - Skill development suggestions ("Try this approach", "Here's how I'd do it")
+      - Experience sharing for growth ("When I was in your role...")
+      - Reframing challenges as learning ("This is a great opportunity to learn X")
+      - Career development guidance ("For your next role, you'll need...")
+      - Mentoring moments between senior and junior participants
+      Do NOT classify general positive feedback as coaching. Coaching must have
+      a growth/learning element.
+    attributes:
+      - name: coach
+        type: string
+      - name: coachee
+        type: string
+      - name: skill_area
+        type: string
+        required: false
+      - name: coaching_type
+        type: enum
+        values: [skill_building, career_development, reframing, experience_sharing]
+      - name: actionable
+        type: boolean
+
+  RECOGNITION:
+    enabled: true
+    confidence_threshold: 0.70
+    description: >
+      Explicit appreciation or recognition of someone's work, effort, or
+      contribution. From Stone & Heen: appreciation says "I see you" and
+      "you matter" — it's about human connection, not evaluation.
+    prompt_hint: >
+      From Stone & Heen: appreciation is distinct from evaluation. "Your work
+      was outstanding" is evaluation. "I really appreciate you staying late to
+      help the team" is appreciation. Look for:
+      - Gratitude expressions ("Thanks for...", "I appreciate...")
+      - Acknowledgment of effort ("I know how hard you worked on...")
+      - Visibility/recognition ("I mentioned your work to the VP")
+      - Team contribution recognition ("The team couldn't have done it without you")
+      The key test: does it make the recipient feel SEEN and VALUED?
+    attributes:
+      - name: recipient
+        type: string
+      - name: what_for
+        type: string
+      - name: visibility
+        type: enum
+        values: [private, team, leadership, public]
+        required: false
 
 summary:
   enabled: true
-  max_length: 200
-  style: "concise, action-oriented"
+  max_length: 250
+  style: >
+    concise, action-oriented. Highlight key decisions, open commitments,
+    unresolved blockers, and any feedback themes. Note if feedback was
+    primarily appreciation, coaching, or evaluation.
