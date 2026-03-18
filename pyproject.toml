@@ -1,0 +1,14 @@
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+markers = [
+    "fast: Fast unit tests with no external dependencies",
+    "llm: Tests that make real LLM API calls (slow, requires OPENAI_API_KEY)",
+    "integration: Full HTTP integration tests via TestClient",
+]
+addopts = "-v --tb=short"
+asyncio_mode = "auto"
+
+[tool.pytest]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

@@ -1,0 +1,59 @@
+{
+  "overall": {
+    "min_f1": 0.40,
+    "min_precision": 0.45,
+    "min_recall": 0.35
+  },
+  "per_type": {
+    "COMMITMENT": {
+      "min_recall": 0.50,
+      "min_precision": 0.55,
+      "min_f1": 0.50
+    },
+    "BLOCKER": {
+      "min_recall": 0.65,
+      "min_precision": 0.50,
+      "min_f1": 0.55
+    },
+    "FEEDBACK": {
+      "min_recall": 0.10,
+      "min_precision": 0.10,
+      "min_f1": 0.10
+    },
+    "GOAL_UPDATE": {
+      "min_recall": 0.25,
+      "min_precision": 0.50,
+      "min_f1": 0.30
+    },
+    "ACTION_ITEM": {
+      "min_recall": 0.30,
+      "min_precision": 0.40,
+      "min_f1": 0.35
+    },
+    "SENTIMENT": {
+      "min_recall": 0.00,
+      "min_precision": 0.00,
+      "min_f1": 0.00
+    },
+    "DECISION": {
+      "min_recall": 0.35,
+      "min_precision": 0.80,
+      "min_f1": 0.45
+    }
+  },
+  "false_positive_rate": {
+    "max_fp_rate_ambiguous": 0.10,
+    "max_fp_rate_edge_case": 0.10
+  },
+  "confidence_calibration": {
+    "high_confidence_min_accuracy": 0.50,
+    "low_confidence_max_accuracy": 0.95,
+    "high_confidence_threshold": 0.85,
+    "low_confidence_threshold": 0.65
+  },
+  "stability": {
+    "min_type_consistency": 0.60,
+    "max_count_variance": 0.40,
+    "max_confidence_std": 0.20
+  }
+}

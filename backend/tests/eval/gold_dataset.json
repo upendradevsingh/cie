@@ -1,0 +1,671 @@
+[
+  {
+    "id": "gold_001",
+    "name": "Clear 1:1 — API migration commitment with deadline",
+    "category": "clear_1on1",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "mgr_01", "name": "Priya Sharma", "role": "engineering_manager"},
+      {"externalId": "eng_01", "name": "Rahul Verma", "role": "senior_engineer"}
+    ],
+    "segments": [
+      {"speaker": "Priya Sharma", "text": "Hey Rahul, how's the payments API migration going?", "startTime": 0, "endTime": 4},
+      {"speaker": "Rahul Verma", "text": "Good progress actually. I finished the schema changes yesterday and the data backfill script is running. Should be done by tonight.", "startTime": 4, "endTime": 10},
+      {"speaker": "Priya Sharma", "text": "Nice. What about the downstream consumers? Have you talked to the checkout team?", "startTime": 10, "endTime": 14},
+      {"speaker": "Rahul Verma", "text": "Not yet, that's on my list. I'll set up a sync with Deepak from checkout by Wednesday.", "startTime": 14, "endTime": 19},
+      {"speaker": "Priya Sharma", "text": "Good. The deadline for the full cutover is March 28th. Are we still on track?", "startTime": 19, "endTime": 24},
+      {"speaker": "Rahul Verma", "text": "Yeah, I'm confident we'll hit it. The only risk is if the load testing uncovers something unexpected.", "startTime": 24, "endTime": 30},
+      {"speaker": "Priya Sharma", "text": "Alright, I'll block time on Friday for a go/no-go review. Let me know if anything comes up before that.", "startTime": 30, "endTime": 36}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "COMMITMENT", "description_contains": ["sync", "Deepak", "checkout", "Wednesday"], "min_confidence": 0.75},
+      {"extraction_type": "COMMITMENT", "description_contains": ["go/no-go", "review", "Friday"], "min_confidence": 0.70},
+      {"extraction_type": "GOAL_UPDATE", "description_contains": ["payments", "API", "migration", "on track"], "min_confidence": 0.65},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["sync", "checkout", "Deepak"], "min_confidence": 0.70}
+    ],
+    "expected_absent": [],
+    "tags": ["clear", "1on1", "deadline", "migration"]
+  },
+  {
+    "id": "gold_002",
+    "name": "Clear 1:1 — Blocker escalation with resolution plan",
+    "category": "clear_1on1",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "mgr_02", "name": "Ankit Desai", "role": "engineering_manager"},
+      {"externalId": "eng_02", "name": "Sneha Kulkarni", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Ankit Desai", "text": "Sneha, you mentioned in standup that the search indexing pipeline is stuck. What's happening?", "startTime": 0, "endTime": 5},
+      {"speaker": "Sneha Kulkarni", "text": "Yeah, so the Elasticsearch cluster has been at 95% disk for three days now. I raised a ticket with the platform team but haven't heard back.", "startTime": 5, "endTime": 12},
+      {"speaker": "Ankit Desai", "text": "That's a P1 blocker. I'll ping Vikram directly and get this unblocked today.", "startTime": 12, "endTime": 17},
+      {"speaker": "Sneha Kulkarni", "text": "Thanks. Once the disk issue is sorted, I can have the new product catalog indexed within two days.", "startTime": 17, "endTime": 22},
+      {"speaker": "Ankit Desai", "text": "Got it. Let's also add monitoring alerts so this doesn't happen again. Can you create a Jira for that?", "startTime": 22, "endTime": 28},
+      {"speaker": "Sneha Kulkarni", "text": "Sure, I'll create the ticket today.", "startTime": 28, "endTime": 31}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "BLOCKER", "description_contains": ["Elasticsearch", "disk", "search", "indexing"], "min_confidence": 0.80},
+      {"extraction_type": "COMMITMENT", "description_contains": ["Vikram", "unblocked", "today"], "min_confidence": 0.80},
+      {"extraction_type": "COMMITMENT", "description_contains": ["catalog", "indexed", "two days"], "min_confidence": 0.70},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["Jira", "monitoring", "alerts"], "min_confidence": 0.75}
+    ],
+    "expected_absent": ["FEEDBACK"],
+    "tags": ["clear", "1on1", "blocker", "escalation"]
+  },
+  {
+    "id": "gold_003",
+    "name": "Clear 1:1 — Performance feedback and growth plan",
+    "category": "clear_1on1",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "mgr_03", "name": "Meera Nair", "role": "engineering_manager"},
+      {"externalId": "eng_03", "name": "Arjun Mehta", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Meera Nair", "text": "Arjun, I wanted to talk about your work on the notification service. Really solid architecture decisions there.", "startTime": 0, "endTime": 6},
+      {"speaker": "Arjun Mehta", "text": "Thanks Meera. I spent a lot of time on the retry logic and dead letter queue design.", "startTime": 6, "endTime": 11},
+      {"speaker": "Meera Nair", "text": "It shows. One area I'd like you to work on is documentation. The team struggled to onboard onto your service because the README was bare.", "startTime": 11, "endTime": 18},
+      {"speaker": "Arjun Mehta", "text": "Fair point. I'll update the docs this sprint. I'll add architecture diagrams and the runbook.", "startTime": 18, "endTime": 24},
+      {"speaker": "Meera Nair", "text": "Great. For your growth, I think you should aim for a tech lead role by Q3. Let's define what that looks like.", "startTime": 24, "endTime": 30},
+      {"speaker": "Arjun Mehta", "text": "I'd love that. I'll draft a growth plan and share it with you next week.", "startTime": 30, "endTime": 35}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "FEEDBACK", "description_contains": ["architecture", "solid", "notification"], "min_confidence": 0.70},
+      {"extraction_type": "FEEDBACK", "description_contains": ["documentation", "README", "onboard"], "min_confidence": 0.70},
+      {"extraction_type": "COMMITMENT", "description_contains": ["docs", "sprint", "diagrams", "runbook"], "min_confidence": 0.75},
+      {"extraction_type": "COMMITMENT", "description_contains": ["growth plan", "next week"], "min_confidence": 0.75},
+      {"extraction_type": "GOAL_UPDATE", "description_contains": ["tech lead", "Q3"], "min_confidence": 0.60}
+    ],
+    "expected_absent": ["BLOCKER"],
+    "tags": ["clear", "1on1", "feedback", "growth"]
+  },
+  {
+    "id": "gold_004",
+    "name": "Clear 1:1 — Sprint retro and workload balancing",
+    "category": "clear_1on1",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "mgr_04", "name": "Kavita Reddy", "role": "engineering_manager"},
+      {"externalId": "eng_04", "name": "Saurabh Joshi", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Kavita Reddy", "text": "Saurabh, the sprint velocity dropped 30% last cycle. What happened?", "startTime": 0, "endTime": 5},
+      {"speaker": "Saurabh Joshi", "text": "Honestly, I got pulled into three different incident responses. The payment gateway outage alone took two full days.", "startTime": 5, "endTime": 12},
+      {"speaker": "Kavita Reddy", "text": "That's not sustainable. I'm going to set up an on-call rotation so the interrupts are shared. I'll have the proposal ready by Monday.", "startTime": 12, "endTime": 19},
+      {"speaker": "Saurabh Joshi", "text": "That would be a huge relief. Also, I think we need to move the caching layer work to next sprint. I won't finish it this week with the carryover.", "startTime": 19, "endTime": 26},
+      {"speaker": "Kavita Reddy", "text": "Agreed. I'll update the sprint plan. Focus on closing the auth refactor first.", "startTime": 26, "endTime": 31}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "BLOCKER", "description_contains": ["incident", "interrupts", "payment", "outage"], "min_confidence": 0.70},
+      {"extraction_type": "COMMITMENT", "description_contains": ["on-call", "rotation", "Monday"], "min_confidence": 0.80},
+      {"extraction_type": "DECISION", "description_contains": ["caching", "next sprint"], "min_confidence": 0.75},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["auth refactor", "close"], "min_confidence": 0.65},
+      {"extraction_type": "GOAL_UPDATE", "description_contains": ["velocity", "dropped", "30%"], "min_confidence": 0.60}
+    ],
+    "expected_absent": [],
+    "tags": ["clear", "1on1", "workload", "sprint"]
+  },
+  {
+    "id": "gold_005",
+    "name": "Clear 1:1 — New joiner onboarding check-in",
+    "category": "clear_1on1",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "mgr_05", "name": "Rohan Gupta", "role": "engineering_manager"},
+      {"externalId": "eng_05", "name": "Nisha Patel", "role": "junior_engineer"}
+    ],
+    "segments": [
+      {"speaker": "Rohan Gupta", "text": "Nisha, it's been three weeks since you joined. How are you settling in?", "startTime": 0, "endTime": 5},
+      {"speaker": "Nisha Patel", "text": "Really well! The codebase walkthrough with Amit was super helpful. I submitted my first PR yesterday for the user preferences module.", "startTime": 5, "endTime": 12},
+      {"speaker": "Rohan Gupta", "text": "That's great to hear. Your PR looked clean, by the way. Good test coverage.", "startTime": 12, "endTime": 17},
+      {"speaker": "Nisha Patel", "text": "Thanks! One thing I'm struggling with is the deployment pipeline. The docs are outdated and I had to ask Amit three times.", "startTime": 17, "endTime": 24},
+      {"speaker": "Rohan Gupta", "text": "That's a valid concern. I'll ask Amit to update the deployment docs this week. And Nisha, if you're comfortable, I'd like you to take on the email template migration as your first solo project.", "startTime": 24, "endTime": 33},
+      {"speaker": "Nisha Patel", "text": "I'd love that! I'll start scoping it tomorrow.", "startTime": 33, "endTime": 36}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "FEEDBACK", "description_contains": ["PR", "clean", "test coverage"], "min_confidence": 0.70},
+      {"extraction_type": "BLOCKER", "description_contains": ["deployment", "pipeline", "docs", "outdated"], "min_confidence": 0.60},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["Amit", "deployment", "docs", "update"], "min_confidence": 0.70},
+      {"extraction_type": "COMMITMENT", "description_contains": ["email template", "migration", "scoping", "tomorrow"], "min_confidence": 0.70},
+      {"extraction_type": "SENTIMENT", "description_contains": ["settling", "well", "positive"], "min_confidence": 0.55}
+    ],
+    "expected_absent": [],
+    "tags": ["clear", "1on1", "onboarding", "new_joiner"]
+  },
+  {
+    "id": "gold_006",
+    "name": "Team standup — Three engineers with blockers and updates",
+    "category": "team_standup",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "eng_06", "name": "Vikram Singh", "role": "tech_lead"},
+      {"externalId": "eng_07", "name": "Pooja Iyer", "role": "engineer"},
+      {"externalId": "eng_08", "name": "Karthik Rao", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Vikram Singh", "text": "Alright, let's do quick updates. I'll go first. I merged the database connection pooling PR yesterday. Today I'm working on the circuit breaker for the recommendation service.", "startTime": 0, "endTime": 8},
+      {"speaker": "Pooja Iyer", "text": "I'm continuing on the user analytics dashboard. The aggregation queries are done, working on the chart components now. No blockers.", "startTime": 8, "endTime": 15},
+      {"speaker": "Karthik Rao", "text": "I'm stuck on the file upload service. The S3 presigned URL generation keeps failing with access denied errors. I've been debugging since yesterday morning.", "startTime": 15, "endTime": 23},
+      {"speaker": "Vikram Singh", "text": "Karthik, that sounds like an IAM policy issue. Let me pair with you after standup, I dealt with the same thing last quarter.", "startTime": 23, "endTime": 29},
+      {"speaker": "Karthik Rao", "text": "That would be great, thanks Vikram.", "startTime": 29, "endTime": 32},
+      {"speaker": "Vikram Singh", "text": "Pooja, when do you think the dashboard will be ready for QA?", "startTime": 32, "endTime": 36},
+      {"speaker": "Pooja Iyer", "text": "End of day Thursday if the chart library doesn't give me more surprises.", "startTime": 36, "endTime": 40}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "GOAL_UPDATE", "description_contains": ["database", "connection pooling", "merged"], "min_confidence": 0.65},
+      {"extraction_type": "GOAL_UPDATE", "description_contains": ["analytics", "dashboard", "aggregation"], "min_confidence": 0.65},
+      {"extraction_type": "BLOCKER", "description_contains": ["S3", "presigned URL", "access denied"], "min_confidence": 0.80},
+      {"extraction_type": "COMMITMENT", "description_contains": ["pair", "Karthik", "after standup"], "min_confidence": 0.75},
+      {"extraction_type": "COMMITMENT", "description_contains": ["dashboard", "QA", "Thursday"], "min_confidence": 0.70}
+    ],
+    "expected_absent": ["FEEDBACK"],
+    "tags": ["standup", "team", "blockers"]
+  },
+  {
+    "id": "gold_007",
+    "name": "Team standup — Cross-team dependency discussion",
+    "category": "team_standup",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "eng_09", "name": "Aditi Chakraborty", "role": "tech_lead"},
+      {"externalId": "eng_10", "name": "Manish Tiwari", "role": "engineer"},
+      {"externalId": "eng_11", "name": "Ritu Saxena", "role": "engineer"},
+      {"externalId": "eng_12", "name": "Naveen Kumar", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Aditi Chakraborty", "text": "Morning everyone. Quick updates and blockers. Manish?", "startTime": 0, "endTime": 3},
+      {"speaker": "Manish Tiwari", "text": "The order service refactor is almost done. I need the updated contract from the inventory team before I can write the integration tests. Waiting on Farhan.", "startTime": 3, "endTime": 11},
+      {"speaker": "Aditi Chakraborty", "text": "I'll follow up with Farhan's manager today. Ritu?", "startTime": 11, "endTime": 14},
+      {"speaker": "Ritu Saxena", "text": "I pushed the rate limiter to staging yesterday. Load test results look good — 99th percentile latency is under 50ms. I'll write the runbook today.", "startTime": 14, "endTime": 22},
+      {"speaker": "Aditi Chakraborty", "text": "Excellent work on the latency numbers, Ritu.", "startTime": 22, "endTime": 25},
+      {"speaker": "Naveen Kumar", "text": "I'm wrapping up the push notification retry logic. Should be ready for review by EOD. One question — should we use exponential backoff or fixed intervals?", "startTime": 25, "endTime": 33},
+      {"speaker": "Aditi Chakraborty", "text": "Exponential backoff. Let's keep it consistent with the email service pattern. Cap at 5 retries.", "startTime": 33, "endTime": 38}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "BLOCKER", "description_contains": ["contract", "inventory", "Farhan"], "min_confidence": 0.75},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["follow up", "Farhan"], "min_confidence": 0.70},
+      {"extraction_type": "GOAL_UPDATE", "description_contains": ["rate limiter", "staging", "latency", "50ms"], "min_confidence": 0.65},
+      {"extraction_type": "FEEDBACK", "description_contains": ["latency", "excellent", "Ritu"], "min_confidence": 0.60},
+      {"extraction_type": "DECISION", "description_contains": ["exponential backoff", "5 retries"], "min_confidence": 0.75},
+      {"extraction_type": "COMMITMENT", "description_contains": ["runbook", "today"], "min_confidence": 0.70}
+    ],
+    "expected_absent": [],
+    "tags": ["standup", "team", "cross-team", "dependency"]
+  },
+  {
+    "id": "gold_008",
+    "name": "Team standup — Sprint end crunch with multiple deliverables",
+    "category": "team_standup",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "eng_13", "name": "Suresh Menon", "role": "tech_lead"},
+      {"externalId": "eng_14", "name": "Divya Krishnan", "role": "engineer"},
+      {"externalId": "eng_15", "name": "Aman Sethi", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Suresh Menon", "text": "Sprint ends Friday. Let's do a status check. Divya, the SSO integration?", "startTime": 0, "endTime": 5},
+      {"speaker": "Divya Krishnan", "text": "SAML flow is working end to end. I still need to handle the edge case where the IDP returns multiple group claims. Expecting to close it by tomorrow EOD.", "startTime": 5, "endTime": 14},
+      {"speaker": "Suresh Menon", "text": "Good. Aman, the logging pipeline?", "startTime": 14, "endTime": 17},
+      {"speaker": "Aman Sethi", "text": "Bit behind honestly. The Kafka consumer offset issue ate up two days. I've fixed that but the log aggregation part still needs a day of work. I'll need to push the Grafana dashboards to next sprint.", "startTime": 17, "endTime": 27},
+      {"speaker": "Suresh Menon", "text": "That's fine. Let's make sure the core pipeline is solid. Grafana can wait. I'll update the sprint board. Also, both of you please add unit tests before marking tickets done.", "startTime": 27, "endTime": 36}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "GOAL_UPDATE", "description_contains": ["SSO", "SAML", "working", "edge case"], "min_confidence": 0.65},
+      {"extraction_type": "COMMITMENT", "description_contains": ["SSO", "tomorrow", "EOD"], "min_confidence": 0.70},
+      {"extraction_type": "GOAL_UPDATE", "description_contains": ["logging", "pipeline", "behind", "Kafka"], "min_confidence": 0.65},
+      {"extraction_type": "DECISION", "description_contains": ["Grafana", "next sprint", "push"], "min_confidence": 0.75},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["unit tests", "tickets"], "min_confidence": 0.70}
+    ],
+    "expected_absent": [],
+    "tags": ["standup", "team", "sprint_end"]
+  },
+  {
+    "id": "gold_009",
+    "name": "Feedback-heavy — Quarterly performance review",
+    "category": "feedback_heavy",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "mgr_06", "name": "Lakshmi Sundaram", "role": "engineering_manager"},
+      {"externalId": "eng_16", "name": "Pranav Deshpande", "role": "senior_engineer"}
+    ],
+    "segments": [
+      {"speaker": "Lakshmi Sundaram", "text": "Pranav, let's go through your Q4 review. Starting with the positives — your ownership of the payment reconciliation system was outstanding. Zero production incidents since launch.", "startTime": 0, "endTime": 9},
+      {"speaker": "Pranav Deshpande", "text": "Thanks Lakshmi. I put a lot of effort into the test suite and the canary deployment strategy.", "startTime": 9, "endTime": 14},
+      {"speaker": "Lakshmi Sundaram", "text": "It shows. The peer feedback also highlights your mentoring of Nisha and Karthik. They both called out how patient you are during code reviews.", "startTime": 14, "endTime": 22},
+      {"speaker": "Pranav Deshpande", "text": "That means a lot. I enjoy helping them grow.", "startTime": 22, "endTime": 26},
+      {"speaker": "Lakshmi Sundaram", "text": "Now for areas of improvement. Communication with stakeholders needs work. Product managers have flagged that they sometimes don't get updates until the demo. I need you to send weekly status emails to the product team.", "startTime": 26, "endTime": 37},
+      {"speaker": "Pranav Deshpande", "text": "Fair criticism. I'll start sending those weekly updates beginning next Monday.", "startTime": 37, "endTime": 42},
+      {"speaker": "Lakshmi Sundaram", "text": "Also, your design docs tend to be very terse. I'd like you to use the team template and include the tradeoffs section. Overall rating is Exceeds Expectations.", "startTime": 42, "endTime": 51}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "FEEDBACK", "description_contains": ["payment reconciliation", "outstanding", "zero incidents"], "min_confidence": 0.80},
+      {"extraction_type": "FEEDBACK", "description_contains": ["mentoring", "code reviews", "patient"], "min_confidence": 0.70},
+      {"extraction_type": "FEEDBACK", "description_contains": ["communication", "stakeholders", "improvement"], "min_confidence": 0.75},
+      {"extraction_type": "FEEDBACK", "description_contains": ["design docs", "terse", "tradeoffs"], "min_confidence": 0.70},
+      {"extraction_type": "COMMITMENT", "description_contains": ["weekly", "updates", "Monday"], "min_confidence": 0.80},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["weekly", "status", "emails", "product"], "min_confidence": 0.70}
+    ],
+    "expected_absent": ["BLOCKER"],
+    "tags": ["feedback", "performance_review", "quarterly"]
+  },
+  {
+    "id": "gold_010",
+    "name": "Feedback-heavy — Difficult conversation about underperformance",
+    "category": "feedback_heavy",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "mgr_07", "name": "Rajesh Khanna", "role": "engineering_manager"},
+      {"externalId": "eng_17", "name": "Gaurav Sinha", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Rajesh Khanna", "text": "Gaurav, I wanted to have an honest conversation about your recent delivery. The last two sprints, you've completed only 40% of your committed story points.", "startTime": 0, "endTime": 9},
+      {"speaker": "Gaurav Sinha", "text": "I know, and I'm not happy about it either. I've been context-switching too much between the legacy migration and the new feature work.", "startTime": 9, "endTime": 16},
+      {"speaker": "Rajesh Khanna", "text": "I understand the context-switching is hard, but you need to flag this earlier. I found out about the slippage in the sprint review, not from you.", "startTime": 16, "endTime": 24},
+      {"speaker": "Gaurav Sinha", "text": "You're right. I should have raised it in our 1:1 two weeks ago.", "startTime": 24, "endTime": 28},
+      {"speaker": "Rajesh Khanna", "text": "Going forward, I'm going to take the legacy migration off your plate. Focus only on the notification service. I also want daily 15-minute check-ins for the next two weeks.", "startTime": 28, "endTime": 37},
+      {"speaker": "Gaurav Sinha", "text": "That's fair. I'll commit to better communication and I'll have the notification service auth module done by next Wednesday.", "startTime": 37, "endTime": 44}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "FEEDBACK", "description_contains": ["delivery", "40%", "story points", "underperformance"], "min_confidence": 0.75},
+      {"extraction_type": "FEEDBACK", "description_contains": ["flag", "earlier", "communication"], "min_confidence": 0.70},
+      {"extraction_type": "DECISION", "description_contains": ["legacy migration", "off", "plate", "notification"], "min_confidence": 0.75},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["daily", "check-ins", "two weeks"], "min_confidence": 0.70},
+      {"extraction_type": "COMMITMENT", "description_contains": ["notification", "auth", "Wednesday"], "min_confidence": 0.80}
+    ],
+    "expected_absent": [],
+    "tags": ["feedback", "difficult_conversation", "underperformance"]
+  },
+  {
+    "id": "gold_011",
+    "name": "Feedback-heavy — Promotion discussion with constructive areas",
+    "category": "feedback_heavy",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "mgr_08", "name": "Swati Bhatia", "role": "engineering_director"},
+      {"externalId": "eng_18", "name": "Nikhil Agarwal", "role": "senior_engineer"}
+    ],
+    "segments": [
+      {"speaker": "Swati Bhatia", "text": "Nikhil, let's discuss your readiness for the staff engineer promotion. Your technical depth is not in question — the distributed tracing system you built is used across all services now.", "startTime": 0, "endTime": 10},
+      {"speaker": "Nikhil Agarwal", "text": "Thanks Swati. I've been working towards this for a while.", "startTime": 10, "endTime": 14},
+      {"speaker": "Swati Bhatia", "text": "Where I need to see growth is in cross-team influence. Staff engineers drive alignment across teams. I'd like to see you lead the API standards working group.", "startTime": 14, "endTime": 22},
+      {"speaker": "Nikhil Agarwal", "text": "I'm interested in that. When does the working group meet?", "startTime": 22, "endTime": 26},
+      {"speaker": "Swati Bhatia", "text": "Biweekly, starting next month. Also, your written communication needs to be crisper. The last RFC was too long and the key decisions were buried. Practice writing shorter executive summaries.", "startTime": 26, "endTime": 36},
+      {"speaker": "Nikhil Agarwal", "text": "I'll work on that. I'll rewrite the RFC summary this week as practice and share it with you for feedback.", "startTime": 36, "endTime": 42}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "FEEDBACK", "description_contains": ["distributed tracing", "technical depth", "positive"], "min_confidence": 0.75},
+      {"extraction_type": "FEEDBACK", "description_contains": ["cross-team", "influence", "growth"], "min_confidence": 0.70},
+      {"extraction_type": "FEEDBACK", "description_contains": ["written communication", "RFC", "shorter"], "min_confidence": 0.70},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["API standards", "working group", "lead"], "min_confidence": 0.65},
+      {"extraction_type": "COMMITMENT", "description_contains": ["RFC", "summary", "rewrite", "this week"], "min_confidence": 0.75},
+      {"extraction_type": "GOAL_UPDATE", "description_contains": ["staff engineer", "promotion"], "min_confidence": 0.60}
+    ],
+    "expected_absent": ["BLOCKER"],
+    "tags": ["feedback", "promotion", "growth"]
+  },
+  {
+    "id": "gold_012",
+    "name": "Ambiguous — Casual hallway chat about weekend",
+    "category": "ambiguous",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "eng_19", "name": "Amit Shah", "role": "engineer"},
+      {"externalId": "eng_20", "name": "Neha Rawat", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Amit Shah", "text": "Hey Neha, did you watch the India match yesterday?", "startTime": 0, "endTime": 3},
+      {"speaker": "Neha Rawat", "text": "Yeah! Kohli's innings was incredible. That six over cover was something else.", "startTime": 3, "endTime": 8},
+      {"speaker": "Amit Shah", "text": "I know right. We should organize a team outing to watch the finals together.", "startTime": 8, "endTime": 13},
+      {"speaker": "Neha Rawat", "text": "That would be fun. The new place in Koramangala has big screens.", "startTime": 13, "endTime": 17},
+      {"speaker": "Amit Shah", "text": "Cool, let's figure it out. Anyway, back to debugging this flaky test.", "startTime": 17, "endTime": 21}
+    ],
+    "expected_extractions": [],
+    "expected_absent": ["COMMITMENT", "BLOCKER", "ACTION_ITEM", "DECISION", "GOAL_UPDATE"],
+    "tags": ["ambiguous", "casual", "no_actionable"]
+  },
+  {
+    "id": "gold_013",
+    "name": "Ambiguous — Vague brainstorming with no concrete outcomes",
+    "category": "ambiguous",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "eng_21", "name": "Tanvi Kapoor", "role": "engineer"},
+      {"externalId": "eng_22", "name": "Harsh Vardhan", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Tanvi Kapoor", "text": "I've been thinking about maybe switching to gRPC for the internal services.", "startTime": 0, "endTime": 4},
+      {"speaker": "Harsh Vardhan", "text": "Hmm interesting. Could be worth exploring someday. The protobuf tooling has gotten better.", "startTime": 4, "endTime": 9},
+      {"speaker": "Tanvi Kapoor", "text": "Yeah, maybe. Or maybe we just stick with REST. I dunno, just thinking out loud.", "startTime": 9, "endTime": 14},
+      {"speaker": "Harsh Vardhan", "text": "Yeah, no rush. Something to consider when we have bandwidth.", "startTime": 14, "endTime": 18}
+    ],
+    "expected_extractions": [],
+    "expected_absent": ["COMMITMENT", "ACTION_ITEM", "DECISION", "BLOCKER"],
+    "tags": ["ambiguous", "brainstorming", "vague"]
+  },
+  {
+    "id": "gold_014",
+    "name": "Ambiguous — Social check-in with no work discussion",
+    "category": "ambiguous",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "mgr_09", "name": "Deepika Rana", "role": "engineering_manager"},
+      {"externalId": "eng_23", "name": "Farhan Qureshi", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Deepika Rana", "text": "Farhan, how was your vacation in Goa?", "startTime": 0, "endTime": 3},
+      {"speaker": "Farhan Qureshi", "text": "Amazing! The beaches were gorgeous. We did some scuba diving too.", "startTime": 3, "endTime": 8},
+      {"speaker": "Deepika Rana", "text": "That sounds wonderful. Did you try the local seafood? The fish curry in South Goa is unbeatable.", "startTime": 8, "endTime": 13},
+      {"speaker": "Farhan Qureshi", "text": "Oh yes, we went to this tiny shack near Palolem beach. Best prawn curry ever. You should try it next time.", "startTime": 13, "endTime": 19},
+      {"speaker": "Deepika Rana", "text": "I'll add it to my list! Glad you had a good break. See you at standup tomorrow.", "startTime": 19, "endTime": 24}
+    ],
+    "expected_extractions": [],
+    "expected_absent": ["COMMITMENT", "BLOCKER", "ACTION_ITEM", "DECISION", "GOAL_UPDATE", "FEEDBACK"],
+    "tags": ["ambiguous", "social", "no_work"]
+  },
+  {
+    "id": "gold_015",
+    "name": "Long conversation — Architecture review with multiple decisions",
+    "category": "long",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "eng_24", "name": "Arun Prakash", "role": "staff_engineer"},
+      {"externalId": "eng_25", "name": "Megha Gupta", "role": "senior_engineer"},
+      {"externalId": "eng_26", "name": "Dev Sharma", "role": "engineer"},
+      {"externalId": "eng_27", "name": "Preeti Jain", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Arun Prakash", "text": "Let's review the architecture for the new real-time notification system. Megha, can you walk us through the proposal?", "startTime": 0, "endTime": 6},
+      {"speaker": "Megha Gupta", "text": "Sure. The core idea is to use WebSockets for the client connection and a Redis pub/sub layer for internal message routing.", "startTime": 6, "endTime": 13},
+      {"speaker": "Dev Sharma", "text": "Why Redis pub/sub and not Kafka? We already have Kafka for the event pipeline.", "startTime": 13, "endTime": 18},
+      {"speaker": "Megha Gupta", "text": "Good question. Redis gives us lower latency for real-time delivery. Kafka is great for durability but adds 50-100ms. For notifications, users expect sub-second delivery.", "startTime": 18, "endTime": 27},
+      {"speaker": "Arun Prakash", "text": "I agree with Megha. Let's go with Redis pub/sub for the real-time path and use Kafka as a fallback for guaranteed delivery of critical notifications.", "startTime": 27, "endTime": 35},
+      {"speaker": "Preeti Jain", "text": "What about mobile push notifications? Those go through Firebase, which has its own queueing.", "startTime": 35, "endTime": 40},
+      {"speaker": "Megha Gupta", "text": "Right, the WebSocket path is for web only. Mobile push will go through a separate Firebase adapter. I'll design that interface.", "startTime": 40, "endTime": 47},
+      {"speaker": "Dev Sharma", "text": "One concern — if Redis goes down, we lose all in-flight notifications. We need a circuit breaker.", "startTime": 47, "endTime": 53},
+      {"speaker": "Arun Prakash", "text": "Good point, Dev. Add a circuit breaker that falls back to Kafka when Redis is unavailable. Megha, can you update the design doc with this?", "startTime": 53, "endTime": 61},
+      {"speaker": "Megha Gupta", "text": "I'll update the RFC by end of day tomorrow.", "startTime": 61, "endTime": 64},
+      {"speaker": "Arun Prakash", "text": "Dev, I'd like you to prototype the WebSocket connection handler. Use the connection pooling pattern from the chat service.", "startTime": 64, "endTime": 71},
+      {"speaker": "Dev Sharma", "text": "Got it. I'll have a working prototype by next Tuesday.", "startTime": 71, "endTime": 75},
+      {"speaker": "Preeti Jain", "text": "I can take on the Firebase adapter. I worked on FCM integration at my previous company.", "startTime": 75, "endTime": 80},
+      {"speaker": "Arun Prakash", "text": "Perfect. Preeti, go for it. Let's reconvene Thursday to check progress. I'll send out the calendar invite.", "startTime": 80, "endTime": 87}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "DECISION", "description_contains": ["Redis", "pub/sub", "real-time", "Kafka", "fallback"], "min_confidence": 0.80},
+      {"extraction_type": "DECISION", "description_contains": ["circuit breaker", "Kafka", "Redis", "unavailable"], "min_confidence": 0.75},
+      {"extraction_type": "COMMITMENT", "description_contains": ["RFC", "design doc", "tomorrow"], "min_confidence": 0.80},
+      {"extraction_type": "COMMITMENT", "description_contains": ["prototype", "WebSocket", "Tuesday"], "min_confidence": 0.80},
+      {"extraction_type": "COMMITMENT", "description_contains": ["Firebase", "adapter", "Preeti"], "min_confidence": 0.70},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["reconvene", "Thursday", "calendar"], "min_confidence": 0.70}
+    ],
+    "expected_absent": ["FEEDBACK"],
+    "tags": ["long", "architecture", "decisions", "multiple_speakers"]
+  },
+  {
+    "id": "gold_016",
+    "name": "Long conversation — Incident post-mortem with action items",
+    "category": "long",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "mgr_10", "name": "Sameer Bose", "role": "engineering_manager"},
+      {"externalId": "eng_28", "name": "Ananya Mishra", "role": "senior_engineer"},
+      {"externalId": "eng_29", "name": "Rohit Bansal", "role": "engineer"},
+      {"externalId": "eng_30", "name": "Simran Kaur", "role": "SRE"}
+    ],
+    "segments": [
+      {"speaker": "Sameer Bose", "text": "Let's do the post-mortem for Friday's checkout outage. Simran, can you set the timeline?", "startTime": 0, "endTime": 5},
+      {"speaker": "Simran Kaur", "text": "Sure. At 14:32 IST, the checkout service started returning 500s. By 14:45, error rate hit 80%. We declared an incident at 14:50.", "startTime": 5, "endTime": 14},
+      {"speaker": "Rohit Bansal", "text": "I was on call. I found that the database connection pool was exhausted. A slow query on the orders table was holding connections for 30+ seconds.", "startTime": 14, "endTime": 23},
+      {"speaker": "Ananya Mishra", "text": "That slow query was my PR from Thursday. I added a new index but missed that it would cause a full table scan on the orders_archive table. I should have tested with production-scale data.", "startTime": 23, "endTime": 34},
+      {"speaker": "Sameer Bose", "text": "Let's not focus on blame. The real gap was in our review process. We need mandatory query plan review for any PR that touches database queries.", "startTime": 34, "endTime": 42},
+      {"speaker": "Simran Kaur", "text": "Agreed. I also noticed our alerting was too slow. The PagerDuty alert fired 18 minutes after the first 500. We need to tighten the threshold.", "startTime": 42, "endTime": 50},
+      {"speaker": "Sameer Bose", "text": "Right. So the action items are: Ananya, fix the query and add the missing index on orders_archive. Simran, update the alerting thresholds to trigger at 5% error rate. And I'll add the query plan review to our PR checklist.", "startTime": 50, "endTime": 63},
+      {"speaker": "Rohit Bansal", "text": "I'll also add a connection pool exhaustion dashboard to Grafana. We were flying blind on Friday.", "startTime": 63, "endTime": 69},
+      {"speaker": "Sameer Bose", "text": "Good. Rohit, can you have that ready by Wednesday? And Ananya, the query fix needs to go out today.", "startTime": 69, "endTime": 75},
+      {"speaker": "Ananya Mishra", "text": "Already working on it. PR should be up within the hour.", "startTime": 75, "endTime": 79},
+      {"speaker": "Simran Kaur", "text": "I'll update the alerts today and send the updated runbook to the on-call channel.", "startTime": 79, "endTime": 84}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "BLOCKER", "description_contains": ["database", "connection pool", "slow query", "outage"], "min_confidence": 0.70},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["query", "fix", "index", "orders_archive"], "min_confidence": 0.80},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["alerting", "thresholds", "5%", "error rate"], "min_confidence": 0.75},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["query plan", "review", "PR checklist"], "min_confidence": 0.70},
+      {"extraction_type": "COMMITMENT", "description_contains": ["Grafana", "dashboard", "Wednesday"], "min_confidence": 0.75},
+      {"extraction_type": "COMMITMENT", "description_contains": ["PR", "within the hour", "query fix"], "min_confidence": 0.75},
+      {"extraction_type": "COMMITMENT", "description_contains": ["alerts", "today", "runbook"], "min_confidence": 0.70},
+      {"extraction_type": "DECISION", "description_contains": ["query plan", "review", "mandatory"], "min_confidence": 0.75}
+    ],
+    "expected_absent": [],
+    "tags": ["long", "post-mortem", "incident", "action_items"]
+  },
+  {
+    "id": "gold_017",
+    "name": "Long conversation — Sprint planning with estimation",
+    "category": "long",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "mgr_11", "name": "Pallavi Mathur", "role": "engineering_manager"},
+      {"externalId": "eng_31", "name": "Tarun Grover", "role": "tech_lead"},
+      {"externalId": "eng_32", "name": "Ishita Banerjee", "role": "engineer"},
+      {"externalId": "eng_33", "name": "Varun Nair", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Pallavi Mathur", "text": "Let's plan the next sprint. We have 40 story points capacity after accounting for Varun's on-call days.", "startTime": 0, "endTime": 6},
+      {"speaker": "Tarun Grover", "text": "The top priority from product is the checkout flow redesign. I'd estimate 13 points for the backend changes.", "startTime": 6, "endTime": 13},
+      {"speaker": "Ishita Banerjee", "text": "I can take the checkout backend. I'm familiar with the payment service already.", "startTime": 13, "endTime": 18},
+      {"speaker": "Pallavi Mathur", "text": "Great. Ishita, you'll own the checkout flow backend. What else is on the board?", "startTime": 18, "endTime": 23},
+      {"speaker": "Tarun Grover", "text": "We have the search autocomplete feature — 8 points. And the security vulnerability patches from the audit — I'd say 5 points but it's non-negotiable, has to ship this sprint.", "startTime": 23, "endTime": 33},
+      {"speaker": "Varun Nair", "text": "I can handle the security patches. They're mostly dependency upgrades and a couple of input sanitization fixes.", "startTime": 33, "endTime": 39},
+      {"speaker": "Tarun Grover", "text": "That leaves us 14 points. I'll take the search autocomplete myself. The remaining 6 points, let's keep as buffer for bug fixes.", "startTime": 39, "endTime": 47},
+      {"speaker": "Pallavi Mathur", "text": "Sounds like a plan. Ishita — checkout backend, 13 points. Varun — security patches, 5 points. Tarun — search autocomplete, 8 points. 6 points buffer. Let's commit to this.", "startTime": 47, "endTime": 58},
+      {"speaker": "Tarun Grover", "text": "One more thing — the checkout flow has a dependency on the new address validation API. I'll check with the address team on their timeline.", "startTime": 58, "endTime": 65},
+      {"speaker": "Pallavi Mathur", "text": "Good catch. Block the last 3 points of checkout work until that dependency is confirmed.", "startTime": 65, "endTime": 70},
+      {"speaker": "Ishita Banerjee", "text": "I'll start with the parts that don't need the address API. Payment flow and cart integration first.", "startTime": 70, "endTime": 76}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "COMMITMENT", "description_contains": ["checkout", "backend", "Ishita"], "min_confidence": 0.75},
+      {"extraction_type": "COMMITMENT", "description_contains": ["security patches", "Varun"], "min_confidence": 0.75},
+      {"extraction_type": "COMMITMENT", "description_contains": ["search", "autocomplete", "Tarun"], "min_confidence": 0.75},
+      {"extraction_type": "BLOCKER", "description_contains": ["address", "validation", "API", "dependency"], "min_confidence": 0.65},
+      {"extraction_type": "DECISION", "description_contains": ["6 points", "buffer", "bug fixes"], "min_confidence": 0.70},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["address team", "timeline", "check"], "min_confidence": 0.70}
+    ],
+    "expected_absent": ["FEEDBACK"],
+    "tags": ["long", "sprint_planning", "estimation"]
+  },
+  {
+    "id": "gold_018",
+    "name": "Short conversation — Quick standup update, single commitment",
+    "category": "short",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "mgr_12", "name": "Yash Tandon", "role": "engineering_manager"},
+      {"externalId": "eng_34", "name": "Shruti Menon", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Shruti Menon", "text": "Hey Yash, quick update. The API rate limiter is done and deployed to staging. I'll run load tests today and push to prod tomorrow morning.", "startTime": 0, "endTime": 8},
+      {"speaker": "Yash Tandon", "text": "Sounds good. Make sure to get sign-off from SRE before the prod deploy.", "startTime": 8, "endTime": 12}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "GOAL_UPDATE", "description_contains": ["rate limiter", "done", "staging"], "min_confidence": 0.70},
+      {"extraction_type": "COMMITMENT", "description_contains": ["load tests", "today", "prod", "tomorrow"], "min_confidence": 0.75},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["sign-off", "SRE", "prod"], "min_confidence": 0.65}
+    ],
+    "expected_absent": ["FEEDBACK", "BLOCKER"],
+    "tags": ["short", "quick_update"]
+  },
+  {
+    "id": "gold_019",
+    "name": "Short conversation — Single blocker report",
+    "category": "short",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "eng_35", "name": "Ravi Teja", "role": "engineer"},
+      {"externalId": "eng_36", "name": "Ankita Goel", "role": "tech_lead"}
+    ],
+    "segments": [
+      {"speaker": "Ravi Teja", "text": "Ankita, I can't deploy the inventory service. The CI pipeline is broken — the Docker build fails because the base image was removed from the registry.", "startTime": 0, "endTime": 8}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "BLOCKER", "description_contains": ["CI pipeline", "Docker", "base image", "registry"], "min_confidence": 0.80}
+    ],
+    "expected_absent": ["COMMITMENT", "FEEDBACK", "GOAL_UPDATE", "DECISION"],
+    "tags": ["short", "single_segment", "blocker"]
+  },
+  {
+    "id": "gold_020",
+    "name": "Hinglish — Manager-engineer 1:1 with mixed Hindi-English",
+    "category": "hinglish",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "mgr_13", "name": "Sanjay Mishra", "role": "engineering_manager"},
+      {"externalId": "eng_37", "name": "Prateek Dubey", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Sanjay Mishra", "text": "Prateek, tera search service ka kya status hai? Product team bahut push kar rahi hai.", "startTime": 0, "endTime": 5},
+      {"speaker": "Prateek Dubey", "text": "Sanjay bhai, main 80% done hoon. Elasticsearch queries optimize kar raha tha, latency 200ms se 40ms pe aa gayi hai.", "startTime": 5, "endTime": 12},
+      {"speaker": "Sanjay Mishra", "text": "Bahut accha! Yeh numbers impressive hain. Baaki 20% mein kya pending hai?", "startTime": 12, "endTime": 17},
+      {"speaker": "Prateek Dubey", "text": "Autocomplete suggestions ka ranking algorithm baaki hai. Uske liye ML team se ek model chahiye, lekin woh log respond nahi kar rahe.", "startTime": 17, "endTime": 25},
+      {"speaker": "Sanjay Mishra", "text": "Main ML team ke Ashish se baat karta hoon aaj. Tujhe by Thursday unblock kar dunga.", "startTime": 25, "endTime": 31},
+      {"speaker": "Prateek Dubey", "text": "Shukriya. Agar model mil gaya toh main next Monday tak poora kar lunga.", "startTime": 31, "endTime": 36}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "GOAL_UPDATE", "description_contains": ["search", "80%", "latency", "40ms"], "min_confidence": 0.65},
+      {"extraction_type": "BLOCKER", "description_contains": ["ML team", "model", "respond", "ranking"], "min_confidence": 0.70},
+      {"extraction_type": "COMMITMENT", "description_contains": ["Ashish", "ML team", "Thursday", "unblock"], "min_confidence": 0.75},
+      {"extraction_type": "COMMITMENT", "description_contains": ["Monday", "complete", "search"], "min_confidence": 0.70}
+    ],
+    "expected_absent": [],
+    "tags": ["hinglish", "mixed_language", "actionable"]
+  },
+  {
+    "id": "gold_021",
+    "name": "Hinglish — Team discussion about deployment issues",
+    "category": "hinglish",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "eng_38", "name": "Kunal Saxena", "role": "tech_lead"},
+      {"externalId": "eng_39", "name": "Rashmi Pillai", "role": "engineer"},
+      {"externalId": "eng_40", "name": "Sachin Yadav", "role": "SRE"}
+    ],
+    "segments": [
+      {"speaker": "Kunal Saxena", "text": "Sachin, kal raat ka deployment kaisa gaya? Subah se kuch complaints aa rahe hain.", "startTime": 0, "endTime": 5},
+      {"speaker": "Sachin Yadav", "text": "Haan, ek issue aaya tha. New config changes ka rollout partial hua — 3 out of 8 pods ne naya config nahi pick kiya.", "startTime": 5, "endTime": 13},
+      {"speaker": "Rashmi Pillai", "text": "Oh, that's the ConfigMap reload issue I flagged last month. We need the Reloader sidecar container, remember?", "startTime": 13, "endTime": 19},
+      {"speaker": "Kunal Saxena", "text": "Yes, that's been pending too long. Sachin, please add the Reloader today. Rashmi, can you verify the fix with a test deployment on staging?", "startTime": 19, "endTime": 27},
+      {"speaker": "Sachin Yadav", "text": "Done, main aaj hi laga dunga Reloader. Aur ek baat — hume rolling restart bhi automate karna chahiye.", "startTime": 27, "endTime": 34},
+      {"speaker": "Kunal Saxena", "text": "Agreed. Let's create a ticket for that and pick it up next sprint.", "startTime": 34, "endTime": 38}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "BLOCKER", "description_contains": ["ConfigMap", "reload", "pods", "config"], "min_confidence": 0.70},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["Reloader", "sidecar", "today"], "min_confidence": 0.75},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["verify", "staging", "test deployment"], "min_confidence": 0.65},
+      {"extraction_type": "DECISION", "description_contains": ["rolling restart", "automate", "next sprint"], "min_confidence": 0.65}
+    ],
+    "expected_absent": ["FEEDBACK"],
+    "tags": ["hinglish", "deployment", "mixed_language"]
+  },
+  {
+    "id": "gold_022",
+    "name": "Edge case — Empty/whitespace text segments",
+    "category": "edge_case",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "eng_41", "name": "Test User", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Test User", "text": "", "startTime": 0, "endTime": 1},
+      {"speaker": "Test User", "text": "   ", "startTime": 1, "endTime": 2},
+      {"speaker": "Test User", "text": "\n\n", "startTime": 2, "endTime": 3}
+    ],
+    "expected_extractions": [],
+    "expected_absent": ["COMMITMENT", "BLOCKER", "FEEDBACK", "GOAL_UPDATE", "ACTION_ITEM", "SENTIMENT", "DECISION"],
+    "tags": ["edge_case", "empty", "whitespace"]
+  },
+  {
+    "id": "gold_023",
+    "name": "Edge case — Single-word segments with no context",
+    "category": "edge_case",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "eng_42", "name": "Speaker One", "role": "engineer"},
+      {"externalId": "eng_43", "name": "Speaker Two", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Speaker One", "text": "Hello", "startTime": 0, "endTime": 1},
+      {"speaker": "Speaker Two", "text": "Hi", "startTime": 1, "endTime": 2},
+      {"speaker": "Speaker One", "text": "Okay", "startTime": 2, "endTime": 3},
+      {"speaker": "Speaker Two", "text": "Sure", "startTime": 3, "endTime": 4},
+      {"speaker": "Speaker One", "text": "Bye", "startTime": 4, "endTime": 5}
+    ],
+    "expected_extractions": [],
+    "expected_absent": ["COMMITMENT", "BLOCKER", "FEEDBACK", "GOAL_UPDATE", "ACTION_ITEM", "DECISION"],
+    "tags": ["edge_case", "single_word", "minimal"]
+  },
+  {
+    "id": "gold_024",
+    "name": "Decision-focused — Technical tradeoff discussion",
+    "category": "decision",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "eng_44", "name": "Ajay Thakur", "role": "staff_engineer"},
+      {"externalId": "eng_45", "name": "Smita Patil", "role": "senior_engineer"},
+      {"externalId": "eng_46", "name": "Omar Farouk", "role": "engineer"}
+    ],
+    "segments": [
+      {"speaker": "Ajay Thakur", "text": "We need to decide on the database for the new analytics pipeline. Options are ClickHouse and BigQuery.", "startTime": 0, "endTime": 6},
+      {"speaker": "Smita Patil", "text": "ClickHouse gives us more control and lower cost at our data volume. But we'd need to manage the cluster ourselves.", "startTime": 6, "endTime": 13},
+      {"speaker": "Omar Farouk", "text": "BigQuery is fully managed and our data team already knows the SQL dialect. Migration cost would be lower.", "startTime": 13, "endTime": 19},
+      {"speaker": "Ajay Thakur", "text": "What about latency? We need sub-second dashboard queries.", "startTime": 19, "endTime": 23},
+      {"speaker": "Smita Patil", "text": "ClickHouse easily does sub-second on our data size. BigQuery can too with materialized views but it's less predictable.", "startTime": 23, "endTime": 30},
+      {"speaker": "Ajay Thakur", "text": "Alright, let's go with ClickHouse. The performance guarantee is critical for us. Smita, you'll own the cluster setup. Omar, work on the data ingestion pipeline from Kafka to ClickHouse.", "startTime": 30, "endTime": 41},
+      {"speaker": "Omar Farouk", "text": "I'll have the ingestion pipeline prototype ready in two weeks.", "startTime": 41, "endTime": 45},
+      {"speaker": "Smita Patil", "text": "Cluster should be provisioned by end of this week. I'll use the existing Terraform modules.", "startTime": 45, "endTime": 50}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "DECISION", "description_contains": ["ClickHouse", "analytics", "pipeline", "performance"], "min_confidence": 0.85},
+      {"extraction_type": "COMMITMENT", "description_contains": ["ingestion", "pipeline", "two weeks", "Omar"], "min_confidence": 0.80},
+      {"extraction_type": "COMMITMENT", "description_contains": ["cluster", "provisioned", "end of this week", "Smita"], "min_confidence": 0.80},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["cluster setup", "Smita"], "min_confidence": 0.70},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["data ingestion", "Kafka", "ClickHouse", "Omar"], "min_confidence": 0.70}
+    ],
+    "expected_absent": ["FEEDBACK", "BLOCKER"],
+    "tags": ["decision", "technical", "tradeoff"]
+  },
+  {
+    "id": "gold_025",
+    "name": "All-types — Dense conversation hitting all 7 extraction types",
+    "category": "all_types",
+    "profile": "performance",
+    "participants": [
+      {"externalId": "mgr_14", "name": "Nandini Rao", "role": "engineering_manager"},
+      {"externalId": "eng_47", "name": "Vivek Choudhary", "role": "senior_engineer"}
+    ],
+    "segments": [
+      {"speaker": "Nandini Rao", "text": "Vivek, let's cover everything in this 1:1. First, how's the payment gateway integration going?", "startTime": 0, "endTime": 6},
+      {"speaker": "Vivek Choudhary", "text": "We're at 70% completion. The core payment flow works, but I'm blocked on getting the sandbox API keys from Razorpay. I've emailed them twice with no response.", "startTime": 6, "endTime": 15},
+      {"speaker": "Nandini Rao", "text": "That's frustrating. I'll escalate through our account manager today. We need this resolved by Wednesday.", "startTime": 15, "endTime": 21},
+      {"speaker": "Vivek Choudhary", "text": "Thanks. Once I get the keys, I'll finish the integration and have it ready for QA by next Friday.", "startTime": 21, "endTime": 27},
+      {"speaker": "Nandini Rao", "text": "Good. On a different note, your code review turnaround has been excellent this quarter. The team really appreciates how thorough your reviews are.", "startTime": 27, "endTime": 35},
+      {"speaker": "Vivek Choudhary", "text": "Thanks, I've been trying to be more deliberate about it.", "startTime": 35, "endTime": 39},
+      {"speaker": "Nandini Rao", "text": "One constructive point — I've noticed you tend to gold-plate your implementations. The refund service had three abstraction layers that weren't needed at our current scale. Try to keep it simpler.", "startTime": 39, "endTime": 49},
+      {"speaker": "Vivek Choudhary", "text": "Fair point. I'll be more mindful about YAGNI.", "startTime": 49, "endTime": 53},
+      {"speaker": "Nandini Rao", "text": "Also, we've decided to move to biweekly releases instead of weekly. The QA team can't keep up with the weekly cadence.", "startTime": 53, "endTime": 60},
+      {"speaker": "Vivek Choudhary", "text": "Makes sense. Should I update the CI/CD pipeline config for the new schedule?", "startTime": 60, "endTime": 65},
+      {"speaker": "Nandini Rao", "text": "Yes, please do that this sprint. How are you feeling overall? I know the last few weeks have been intense.", "startTime": 65, "endTime": 71},
+      {"speaker": "Vivek Choudhary", "text": "Honestly, a bit burnt out. The on-call rotations back to back with the integration work have been draining. But I can see the light at the end of the tunnel.", "startTime": 71, "endTime": 80}
+    ],
+    "expected_extractions": [
+      {"extraction_type": "GOAL_UPDATE", "description_contains": ["payment", "gateway", "70%", "completion"], "min_confidence": 0.65},
+      {"extraction_type": "BLOCKER", "description_contains": ["Razorpay", "sandbox", "API keys"], "min_confidence": 0.80},
+      {"extraction_type": "COMMITMENT", "description_contains": ["escalate", "account manager", "today", "Wednesday"], "min_confidence": 0.75},
+      {"extraction_type": "COMMITMENT", "description_contains": ["integration", "QA", "Friday"], "min_confidence": 0.75},
+      {"extraction_type": "FEEDBACK", "description_contains": ["code review", "excellent", "thorough"], "min_confidence": 0.70},
+      {"extraction_type": "FEEDBACK", "description_contains": ["gold-plate", "abstraction", "simpler", "YAGNI"], "min_confidence": 0.70},
+      {"extraction_type": "DECISION", "description_contains": ["biweekly", "releases", "weekly"], "min_confidence": 0.80},
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["CI/CD", "pipeline", "config", "schedule"], "min_confidence": 0.70},
+      {"extraction_type": "SENTIMENT", "description_contains": ["burnt out", "draining", "intense"], "min_confidence": 0.60}
+    ],
+    "expected_absent": [],
+    "tags": ["all_types", "comprehensive", "dense"]
+  }
+]
