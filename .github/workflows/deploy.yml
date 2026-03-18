@@ -1,0 +1,124 @@
+name: Deploy CIE to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests before deploy (emergency only)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  test:
+    if: ${{ !inputs.skip_tests }}
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: cie_test
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: cie_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov pytest-mock httpx
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://cie_test:test_password@localhost:5432/cie_test
+          REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET: test-jwt-secret-for-ci-only
+          OPENAI_API_KEY: test-mock-openai-key
+          DEEPGRAM_API_KEY: test-mock-deepgram-key
+        run: |
+          cd backend
+          pytest tests/ -v --tb=short -m "not llm"
+
+  deploy:
+    needs: [test]
+    if: always() && (needs.test.result == 'success' || inputs.skip_tests)
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Get CIE instance IP
+        id: instance
+        run: |
+          PRIVATE_IP=$(aws ssm get-parameter --name /cie/private-ip --query Parameter.Value --output text)
+          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=cie" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].InstanceId' --output text)
+          echo "private_ip=$PRIVATE_IP" >> $GITHUB_OUTPUT
+          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+          echo "CIE Instance: $INSTANCE_ID ($PRIVATE_IP)"
+
+      - name: Deploy via SSM
+        run: |
+          aws ssm send-command \
+            --instance-ids "${{ steps.instance.outputs.instance_id }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "cd /opt/cie",
+              "sudo git pull origin main",
+              "sudo docker compose -f docker-compose.prod.yml build --no-cache cie-api cie-worker",
+              "sudo docker compose -f docker-compose.prod.yml up -d --force-recreate cie-api cie-worker",
+              "sleep 15",
+              "curl -sf http://localhost:8000/health || exit 1",
+              "echo DEPLOY_SUCCESS"
+            ]' \
+            --timeout-seconds 300 \
+            --output text \
+            --query 'Command.CommandId'
+
+      - name: Wait for deployment
+        run: |
+          COMMAND_ID=$(aws ssm list-commands --instance-id "${{ steps.instance.outputs.instance_id }}" --max-results 1 --query 'Commands[0].CommandId' --output text)
+          echo "Waiting for SSM command: $COMMAND_ID"
+          for i in $(seq 1 30); do
+            STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ steps.instance.outputs.instance_id }}" --query 'Status' --output text 2>/dev/null || echo "Pending")
+            echo "  [$i] Status: $STATUS"
+            if [ "$STATUS" = "Success" ]; then
+              echo "Deploy successful!"
+              exit 0
+            elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ]; then
+              echo "Deploy failed!"
+              aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ steps.instance.outputs.instance_id }}" --query 'StandardErrorContent' --output text
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Deploy timed out"
+          exit 1
+
+      - name: Verify health
+        run: |
+          # Verify via SSM that CIE is healthy
+          aws ssm send-command \
+            --instance-ids "${{ steps.instance.outputs.instance_id }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=["curl -sf http://localhost:8000/health && echo HEALTHY"]' \
+            --timeout-seconds 30 \
+            --output text
