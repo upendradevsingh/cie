@@ -37,19 +37,26 @@ extraction_types:
       Exclude vague aspirations ("We should probably...") — these are NOT commitments.
 
       CRITICAL — DATES AND NAMES:
-      - ALWAYS extract deadlines even from noisy/messy transcripts. "Friday",
-        "next week", "by Wednesday", "tomorrow", "within a week", "end of sprint"
-        are ALL valid deadlines — set the deadline attribute.
+      - ALWAYS extract deadlines. ANY time reference is a valid deadline:
+        * Specific dates: "Jan 20", "March 5", "20th of January"
+        * Days: "Monday", "Friday", "tomorrow", "day after tomorrow"
+        * Weeks: "next week", "this week", "within a week", "in two weeks"
+        * Months: "end of month", "by February", "next month"
+        * Quarters: "by Q1 end", "this quarter", "next quarter"
+        * Sprints: "end of sprint", "next sprint", "this iteration"
+        * Relative: "within 3 days", "in a fortnight", "couple of days"
+        * Vague but still useful: "soon", "ASAP", "before the release"
+        Set the deadline attribute to the EXACT words used (e.g., "next Friday",
+        "Q1 end", "within a week"). If the meeting date is known, also convert
+        to an actual date where possible.
       - ALWAYS extract the person's name who made the commitment. Look for names
         mentioned in surrounding context — "Dinesh and Krish can do that",
         "let's build the engine" (speaker = owner). Set owner_id to the name.
-      - If a date is relative ("next Friday"), convert to the actual date using
-        the meeting date context if available.
       - Extract EVERY commitment, not just the most obvious one. A meeting may
         have 5-10 commitments — capture them all.
     attributes:
       - name: deadline
-        type: date
+        type: string
         required: false
       - name: specificity
         type: enum
@@ -111,9 +118,15 @@ extraction_types:
       CRITICAL — DATES AND NAMES:
       - ALWAYS set assignee to the person's actual name (e.g., "Dinesh", "Krish"),
         not generic labels like "team" or "engineer".
-      - ALWAYS extract due_date from context: "tomorrow", "Friday", "next week",
-        "by Wednesday", "within a week" are all valid dates. Convert relative
-        dates using the meeting date if available.
+      - ALWAYS extract due_date. ANY time reference counts:
+        * Days: "Monday", "tomorrow", "Friday"
+        * Weeks: "next week", "this week", "in two weeks"
+        * Months: "end of month", "by February"
+        * Quarters: "Q1 end", "this quarter"
+        * Sprints: "end of sprint", "next sprint"
+        * Relative: "within 3 days", "ASAP", "before release"
+        Set due_date to the EXACT words used. Convert to actual date if
+        meeting date is known.
       - Extract EACH action item separately. "Dinesh to send notes and Krish to
         publish HLD" is TWO action items, not one.
       - If multiple people are assigned the same task, create one action item
@@ -125,7 +138,7 @@ extraction_types:
         type: string
         required: false
       - name: due_date
-        type: date
+        type: string
         required: false
       - name: priority
         type: enum

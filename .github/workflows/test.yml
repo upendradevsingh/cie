@@ -48,7 +48,7 @@ jobs:
           DEEPGRAM_API_KEY: test-mock-deepgram-key
         run: |
           cd backend
-          pytest tests/ -v --tb=short --cov=app --cov-report=term-missing --cov-report=xml
+          pytest tests/ -v --tb=short --cov=app --cov-report=term-missing --cov-report=xml -m "not llm"
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
