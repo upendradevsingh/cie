@@ -53,9 +53,29 @@ def build_extraction_prompt(
     transcript: str,
     participants: list[dict[str, Any]],
 ) -> str:
-    """Build a dynamic extraction prompt from a profile configuration."""
+    """Build a dynamic extraction prompt from a profile configuration (all types)."""
+    return build_extraction_prompt_for_types(profile, transcript, participants)
+
+
+def build_extraction_prompt_for_types(
+    profile: ExtractionProfile,
+    transcript: str,
+    participants: list[dict[str, Any]],
+    type_filter: set[str] | None = None,
+) -> str:
+    """Build a dynamic extraction prompt, optionally filtered to specific types.
+
+    Args:
+        profile: The extraction profile to use.
+        transcript: Conversation transcript text.
+        participants: List of participant dicts.
+        type_filter: If provided, only include extraction types in this set.
+                     If None, include all enabled types.
+    """
     sections = []
     for ext_type, config in profile.enabled_types().items():
+        if type_filter is not None and ext_type not in type_filter:
+            continue
         attr_descriptions = []
         for attr in config.attributes:
             desc = f"  - {attr.name} ({attr.type}"
