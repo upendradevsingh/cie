@@ -1,95 +1,285 @@
 profile_id: sales
-version: "1.0"
+version: "2.0"
 display_name: "Sales Intelligence"
-description: "Extract quality scores, intent signals, BANT analysis from sales calls"
+description: >
+  Extract structured intelligence from sales calls, discovery meetings, and
+  demos. Powered by proven sales methodologies: SPIN Selling (Rackham),
+  MEDDPICC (McMahon), Challenger Sale (Dixon/Adamson), and BANT.
 
 llm:
   model: "gpt-4o"
   temperature: 0.15
   max_tokens: 4096
+  fallback_model: "gpt-4o"
 
 extraction_types:
-  QUALITY_SCORE:
-    enabled: true
-    confidence_threshold: 0.80
-    description: "Quality assessment for a scoring parameter"
-    attributes:
-      - name: parameter_name
-        type: string
-      - name: score
-        type: number
-        min: 0
-        max: 10
-      - name: justification
-        type: string
-      - name: weight
-        type: number
 
-  INTENT_SIGNAL:
-    enabled: true
-    confidence_threshold: 0.75
-    description: "A buying intent signal detected in the conversation"
-    attributes:
-      - name: signal_name
-        type: string
-      - name: detected
-        type: boolean
-      - name: details
-        type: string
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # DISCOVERY INTELLIGENCE (SPIN Selling)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  PERSONA_BANT:
+  SPIN_QUESTION:
     enabled: true
     confidence_threshold: 0.70
-    description: "BANT (Budget/Authority/Need/Timeline) assessment and persona classification"
+    description: >
+      Question asked by the sales rep classified by SPIN Selling methodology
+      (Neil Rackham, based on 35,000+ sales call analysis).
+    prompt_hint: >
+      From Neil Rackham's SPIN Selling (researched across 35,000 sales calls):
+      Classify each question the rep asks into one of four types:
+
+      1. SITUATION: Gathering facts about current state
+         "How many users do you have?" / "What tools are you using today?"
+         (Necessary but low-value — top reps minimize these)
+
+      2. PROBLEM: Identifying pain, difficulties, dissatisfactions
+         "What challenges are you facing with X?" / "Where does the process break down?"
+         (Reveals pain — moderately valuable)
+
+      3. IMPLICATION: Exploring consequences of the problems
+         "What happens when that process fails?" / "How does that affect your team's velocity?"
+         (MOST valuable — makes the prospect feel the urgency. Top reps ask 3-4x
+         more implication questions than average reps.)
+
+      4. NEED_PAYOFF: Guiding prospect to articulate the value of a solution
+         "If you could cut that time in half, what would that mean for your team?"
+         "How would solving this impact your Q3 targets?"
+         (Lets the prospect sell themselves — highest close rate correlation)
+
+      Also flag the SPIN RATIO: how many of each type? Great discovery has few
+      Situation questions and many Implication + Need-Payoff questions.
     attributes:
-      - name: budget_score
-        type: number
-        min: 0
-        max: 10
-      - name: authority_score
-        type: number
-        min: 0
-        max: 10
-      - name: need_score
-        type: number
-        min: 0
-        max: 10
-      - name: timeline_score
-        type: number
-        min: 0
-        max: 10
-      - name: persona_type
+      - name: spin_type
+        type: enum
+        values: [situation, problem, implication, need_payoff]
+      - name: question_text
         type: string
+      - name: effectiveness
+        type: enum
+        values: [low, medium, high]
+        required: false
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # DEAL QUALIFICATION (MEDDPICC)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  MEDDPICC_SIGNAL:
+    enabled: true
+    confidence_threshold: 0.70
+    description: >
+      Deal qualification signal from the MEDDPICC framework (John McMahon).
+      Each signal maps to one of the 8 MEDDPICC components.
+    prompt_hint: >
+      From MEDDPICC sales qualification framework. Classify each qualifying
+      signal into one of 8 components:
+
+      M — METRICS: Quantifiable measures of value
+        "We need to reduce churn by 15%" / "Looking for 2x pipeline growth"
+        Score: how clearly has the prospect defined success metrics?
+
+      E — ECONOMIC BUYER: Person with budget authority
+        "My VP of Engineering has final sign-off" / "I need to run this by the CFO"
+        Score: have we identified and engaged the economic buyer?
+
+      D — DECISION CRITERIA: What they'll use to evaluate solutions
+        "Security compliance is non-negotiable" / "We need SOC2 + GDPR"
+        Score: do we know their must-haves vs nice-to-haves?
+
+      D — DECISION PROCESS: Steps to reach a decision
+        "We do a POC, then security review, then legal" / "Board approves Q1 budget"
+        Score: do we know every step and timeline?
+
+      I — IDENTIFY PAIN: The business problem driving the initiative
+        "We're losing $200K/month to manual processes" / "Our NPS dropped 20 points"
+        Score: is the pain quantified and urgent?
+
+      C — CHAMPION: Internal advocate with power and influence
+        "Sarah in engineering is pushing for this internally"
+        Score: do we have a champion? Are they coaching us?
+
+      P — PAPER PROCESS: Procurement, legal, security review steps
+        "Legal review takes 3 weeks" / "We need to go through procurement"
+        Score: do we know the paperwork timeline?
+
+      C — COMPETITION: Competitive landscape
+        "We're also evaluating Vendor X" / "We built something internal"
+        Score: do we know who we're competing against?
+    attributes:
+      - name: component
+        type: enum
+        values: [metrics, economic_buyer, decision_criteria, decision_process, identify_pain, champion, paper_process, competition]
+      - name: detail
+        type: string
+      - name: strength
+        type: enum
+        values: [strong, partial, weak, unknown]
+      - name: gap_identified
+        type: boolean
+        required: false
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # OBJECTION HANDLING & COMPETITOR INTELLIGENCE
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   OBJECTION:
     enabled: true
     confidence_threshold: 0.75
-    description: "An objection raised by the prospect"
+    description: "An objection raised by the prospect and how it was handled"
+    prompt_hint: >
+      Classify objections by category and evaluate the rep's response:
+      - PRICE: "Too expensive", "Over budget", cost concerns
+      - TIMING: "Not now", "Next quarter", "Too busy"
+      - AUTHORITY: "Need to check with my boss", "Not my decision"
+      - NEED: "We don't really need this", "Not a priority"
+      - TRUST: "We've been burned before", "How do I know this works?"
+      - COMPETITION: "We're happy with current vendor", "Vendor X does this"
+      - TECHNICAL: "Does it integrate with X?", "Can it handle Y scale?"
+
+      Rate the rep's response quality:
+      - EFFECTIVE: acknowledged concern, reframed, provided evidence
+      - PARTIAL: addressed surface level but didn't fully resolve
+      - MISSED: ignored the objection or changed subject
+      - CREATED_NEW: response created a new concern
     attributes:
       - name: category
+        type: enum
+        values: [price, timing, authority, need, trust, competition, technical]
+      - name: objection_text
         type: string
-      - name: rebuttal
+      - name: rebuttal_text
         type: string
+        required: false
+      - name: handling_quality
+        type: enum
+        values: [effective, partial, missed, created_new]
       - name: resolved
         type: boolean
 
-  LEAD_INTENT:
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # REP BEHAVIOR & CHALLENGER SALE SIGNALS
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  CHALLENGER_SIGNAL:
+    enabled: true
+    confidence_threshold: 0.70
+    description: >
+      Sales rep behavior classified by the Challenger Sale methodology
+      (Dixon & Adamson): teach, tailor, take control.
+    prompt_hint: >
+      From "The Challenger Sale" (based on research across 6,000 reps):
+      Top-performing reps are CHALLENGERS who do three things:
+
+      1. TEACH: Share unique insights the prospect hasn't considered
+         "Most companies in your space make the mistake of..." / "What we've seen
+         with similar companies is..." / sharing data or perspective that reframes
+         the prospect's thinking
+         (This is the #1 differentiator of top reps)
+
+      2. TAILOR: Customize the message to the stakeholder's specific context
+         Connecting features to THIS prospect's specific pain, role, and goals
+         vs generic pitch
+
+      3. TAKE_CONTROL: Assertively guide the sales process
+         Pushing back on prospect's timeline, suggesting next steps, asking for
+         commitment, being comfortable with constructive tension
+
+      Also identify RELATIONSHIP_SELLING patterns (the opposite of Challenger):
+      - Being overly agreeable, not pushing back
+      - "Whatever you think is best" / "Happy to wait"
+      - Avoiding tension or difficult conversations
+      Relationship sellers are the LOWEST performing profile in the research.
+    attributes:
+      - name: behavior_type
+        type: enum
+        values: [teach, tailor, take_control, relationship_selling]
+      - name: detail
+        type: string
+      - name: effectiveness
+        type: enum
+        values: [strong, moderate, weak]
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # DEAL SCORING & NEXT STEPS
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  NEXT_STEP:
     enabled: true
     confidence_threshold: 0.80
-    description: "Overall lead intent classification and scoring"
+    description: "A concrete next step agreed upon during the conversation"
+    prompt_hint: >
+      A qualified next step has: WHO does WHAT by WHEN.
+      - Strong: "I'll send the proposal by Friday, and we'll schedule a call
+        with your VP next Tuesday"
+      - Weak: "Let's circle back" / "I'll follow up" (no specifics)
+      Flag vague next steps — they indicate a deal at risk.
     attributes:
-      - name: intent_score
-        type: number
-        min: 0
-        max: 100
-      - name: classification
+      - name: owner
+        type: string
+      - name: action
+        type: string
+      - name: deadline
+        type: date
+        required: false
+      - name: strength
         type: enum
-        values: [hot, warm, cold]
-      - name: follow_up_urgency
+        values: [strong, weak, vague]
+
+  BUYING_SIGNAL:
+    enabled: true
+    confidence_threshold: 0.70
+    description: "A signal indicating buyer interest or purchase intent"
+    prompt_hint: >
+      Look for buying signals that indicate movement toward a decision:
+      - STRONG: asking about pricing, implementation timeline, contract terms,
+        "How quickly can we get started?", "Can you send a proposal?"
+      - MODERATE: asking detailed questions about features, requesting references,
+        "How does this compare to X?", asking about specific use cases
+      - WEAK: general interest but no commitment signals, "Interesting", "Good to know"
+      - NEGATIVE: pulling back, "We need more time", "Not sure this is for us"
+    attributes:
+      - name: signal_strength
         type: enum
-        values: [immediate, this_week, next_week, nurture]
+        values: [strong, moderate, weak, negative]
+      - name: signal_text
+        type: string
+      - name: deal_stage_indicator
+        type: enum
+        values: [early_discovery, evaluation, negotiation, closing]
+        required: false
+
+  DEAL_RISK:
+    enabled: true
+    confidence_threshold: 0.70
+    description: "A risk factor that could prevent or delay deal closure"
+    prompt_hint: >
+      Identify risks to deal closure:
+      - NO_CHAMPION: no internal advocate identified
+      - NO_METRICS: prospect hasn't defined success metrics
+      - NO_TIMELINE: no urgency or deadline to decide
+      - COMPETITOR_THREAT: strong competitor mentioned favorably
+      - BUDGET_RISK: budget not approved or uncertain
+      - STAKEHOLDER_RISK: key decision maker not engaged
+      - TECHNICAL_RISK: integration/compatibility concerns unresolved
+      - PROCESS_RISK: procurement/legal process unclear or lengthy
+    attributes:
+      - name: risk_type
+        type: enum
+        values: [no_champion, no_metrics, no_timeline, competitor_threat, budget_risk, stakeholder_risk, technical_risk, process_risk]
+      - name: detail
+        type: string
+      - name: mitigation_suggested
+        type: boolean
+        required: false
 
 summary:
   enabled: true
-  max_length: 300
-  style: "sales-focused, highlight intent and next steps"
+  max_length: 350
+  style: >
+    Sales-focused intelligence brief:
+    1. DEAL QUALIFICATION: MEDDPICC scorecard — which components are strong/weak/missing
+    2. DISCOVERY QUALITY: SPIN ratio — were enough implication/need-payoff questions asked?
+    3. CHALLENGER vs RELATIONSHIP: did the rep teach, tailor, take control — or just be agreeable?
+    4. OBJECTIONS: what was raised and how well was it handled?
+    5. BUYING SIGNALS: is the deal moving forward or stalling?
+    6. RISKS: what could kill this deal?
+    7. NEXT STEPS: are they concrete (who/what/when) or vague?

@@ -1,25 +1,38 @@
 profile_id: performance
-version: "2.0"
-display_name: "Performance Management"
+version: "3.0"
+display_name: "Performance Intelligence"
 description: >
-  Extract commitments, blockers, feedback, and sentiment from 1:1s, check-ins,
-  and team meetings. Feedback classification based on Stone & Heen's "Thanks for
-  the Feedback" framework (Appreciation, Coaching, Evaluation).
+  Extract structured intelligence from 1:1s, check-ins, standups, and team
+  meetings. Powered by battle-tested frameworks from organizational psychology
+  and management science: Stone & Heen (feedback), Edmondson (psychological
+  safety), Kim Scott (radical candor), Dweck (growth mindset), Grove (OKRs),
+  Lencioni (accountability), Goldratt (constraints).
 
 llm:
   model: "gpt-4o"
   temperature: 0.15
-  max_tokens: 2048
+  max_tokens: 4096
   fallback_model: "gpt-4o"
 
 extraction_types:
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # EXECUTION INTELLIGENCE
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
   COMMITMENT:
     enabled: true
     confidence_threshold: 0.80
     description: "A specific promise or commitment made by a participant"
     prompt_hint: >
-      Look for personal ownership (I will, I'll, Let me) + specific deliverable.
-      Exclude vague aspirations. A commitment needs WHO + WHAT + WHEN.
+      From Lencioni's "5 Dysfunctions of a Team": real commitment requires
+      CLARITY (everyone knows exactly what was decided) and BUY-IN (even those
+      who disagreed commit to the decision). Look for:
+      - Personal ownership language: "I will", "I'll", "Let me", "I commit to"
+      - Specific deliverable + deadline (WHO + WHAT + WHEN)
+      - Buy-in signals: "I'm on board", "Let's do it", vs ambiguity: "We'll see",
+        "I'll try", "Maybe" (which indicate lack of commitment)
+      Exclude vague aspirations ("We should probably...") — these are NOT commitments.
     attributes:
       - name: deadline
         type: date
@@ -30,15 +43,27 @@ extraction_types:
       - name: owner_id
         type: string
         required: false
+      - name: buy_in_level
+        type: enum
+        values: [strong, tentative, ambiguous]
+        required: false
 
   BLOCKER:
     enabled: true
     confidence_threshold: 0.75
-    description: "Something preventing progress on work"
+    description: "Something preventing or slowing progress on work"
     prompt_hint: >
-      Look for dependency bottlenecks, missing approvals, resource constraints,
-      or external team delays. Distinguish between blockers (cannot proceed)
-      and risks (might slow down).
+      From Goldratt's "Theory of Constraints": identify whether this is a
+      SYSTEMIC constraint (structural bottleneck that will recur — team structure,
+      process, tooling) or a SITUATIONAL constraint (one-time issue that can be
+      removed — waiting on approval, specific person unavailable).
+      Also classify the blocker type:
+      - dependency: waiting on another team/person
+      - resource: lack of people, budget, or tools
+      - approval: waiting on sign-off or decision
+      - technical: engineering limitation or bug
+      - process: organizational process slowing things down
+      - knowledge: lack of information or expertise
     attributes:
       - name: severity
         type: enum
@@ -50,74 +75,83 @@ extraction_types:
         values: [open, resolved]
       - name: blocker_type
         type: enum
-        values: [dependency, resource, approval, technical, external]
+        values: [dependency, resource, approval, technical, process, knowledge]
+      - name: constraint_nature
+        type: enum
+        values: [systemic, situational]
+        required: false
 
-  FEEDBACK:
+  ACTION_ITEM:
     enabled: true
-    confidence_threshold: 0.65
-    description: >
-      Feedback given about a person's performance, behavior, or contribution.
-      Classify using Stone & Heen's three types: appreciation (recognition/thanks),
-      coaching (advice to improve/grow), or evaluation (rating/ranking/judgment).
+    confidence_threshold: 0.75
+    description: "A task assigned during conversation (distinct from self-volunteered commitments)"
     prompt_hint: >
-      IMPORTANT: Classify every feedback instance into exactly one of three types
-      from "Thanks for the Feedback" by Stone & Heen:
-
-      1. APPRECIATION — Recognition, gratitude, acknowledgment that says "I see you"
-         and "you matter." Examples: "Great work on X", "Thanks for stepping up",
-         "Your contribution to Y was outstanding." The core purpose is motivation
-         and human connection.
-
-      2. COACHING — Guidance aimed at helping someone learn, grow, or improve.
-         Can be forward-looking advice, suggestions, or skill development pointers.
-         Examples: "You should try X approach", "Next time consider Y",
-         "Have you thought about Z?" The core purpose is growth.
-
-      3. EVALUATION — Judgment that tells someone where they stand, explicitly or
-         implicitly. Ratings, rankings, comparisons, or assessments against standards.
-         Examples: "You're not meeting expectations on X", "You're one of our
-         strongest engineers", "This is below the bar." The core purpose is
-         assessment and consequences.
-
-      Also identify:
-      - Whether the feedback is based on specific OBSERVATIONS (concrete behaviors,
-        data, outcomes) or vague LABELS ("you're not a team player", "great attitude")
-      - Any BLIND SPOTS surfaced — things the recipient may not see about themselves
-      - Whether the feedback is FORWARD-LOOKING (what to do next) or BACKWARD-LOOKING
-        (what happened)
+      From Grove's "High Output Management": effective action items have a clear
+      OWNER, a DELIVERABLE, and a DUE DATE. Distinguish from COMMITMENTs:
+      - ACTION_ITEM: assigned BY someone TO someone ("Can you...", "Please...",
+        "I need you to...")
+      - COMMITMENT: self-volunteered ("I will...", "Let me...")
+      Flag action items that lack a due date or clear owner — these are
+      accountability gaps (Lencioni).
     attributes:
-      - name: feedback_type
-        type: enum
-        required: true
-        values: [appreciation, coaching, evaluation]
-      - name: recipient
+      - name: assignee
         type: string
-      - name: giver
-        type: string
-      - name: sentiment
-        type: enum
-        values: [positive, constructive, negative]
-      - name: specificity
-        type: enum
-        values: [observation, label]
-      - name: direction
-        type: enum
-        values: [forward_looking, backward_looking]
-      - name: competency
+      - name: assigned_by
         type: string
         required: false
-      - name: blind_spot_surfaced
+      - name: due_date
+        type: date
+        required: false
+      - name: priority
+        type: enum
+        values: [low, medium, high]
+      - name: has_clear_owner
         type: boolean
         required: false
+
+  DECISION:
+    enabled: true
+    confidence_threshold: 0.80
+    description: "A decision explicitly made or agreed upon during conversation"
+    prompt_hint: >
+      From Ray Dalio's "Principles": quality decisions come from
+      IDEA MERITOCRACY — where the best ideas win regardless of who suggests
+      them. Look for:
+      - Explicit agreement: "Let's go with X", "Decided", "We'll do Z"
+      - Whether alternatives were considered (sign of rigorous thinking)
+      - Whether dissent was heard before deciding (idea meritocracy)
+      - Who made the final call (decision maker clarity)
+    attributes:
+      - name: decided_by
+        type: string
+      - name: impact
+        type: enum
+        values: [low, medium, high]
+      - name: alternatives_considered
+        type: list
+        required: false
+      - name: dissent_heard
+        type: boolean
+        required: false
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # GOAL & PROGRESS INTELLIGENCE
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   GOAL_UPDATE:
     enabled: true
     confidence_threshold: 0.70
-    description: "Implicit or explicit progress update on a tracked goal or OKR"
+    description: "Progress update on a goal, OKR, or key deliverable"
     prompt_hint: >
-      Look for percentage progress, milestone completions, metric improvements,
-      or status changes. Include both quantitative (12% CTR improvement) and
-      qualitative (on track, at risk) updates.
+      From Andy Grove's "High Output Management" and the OKR framework:
+      - A good OBJECTIVE is significant, concrete, and clearly defined
+      - Good KEY RESULTS are measurable (number, percentage, dollar amount)
+      - Flag vague goals that lack measurable key results (OKR quality issue)
+      Look for:
+      - Quantitative updates: "12% improvement", "3 of 5 milestones done"
+      - Qualitative status: "on track", "at risk", "behind"
+      - Leading indicators (predictive) vs lagging indicators (historical)
+      - Whether the goal has clear success criteria
     attributes:
       - name: progress_pct
         type: number
@@ -131,93 +165,121 @@ extraction_types:
       - name: metric_value
         type: string
         required: false
-
-  ACTION_ITEM:
-    enabled: true
-    confidence_threshold: 0.75
-    description: "A task or action that needs to be done, assigned during conversation"
-    prompt_hint: >
-      Distinguish from COMMITMENTs: an ACTION_ITEM is assigned (by someone to
-      someone), while a COMMITMENT is self-volunteered. Look for "Can you...",
-      "Please...", "We need someone to...", "I'll ask X to...".
-    attributes:
-      - name: assignee
-        type: string
-      - name: assigned_by
-        type: string
-        required: false
-      - name: due_date
-        type: date
-        required: false
-      - name: priority
+      - name: okr_quality
         type: enum
-        values: [low, medium, high]
+        values: [measurable, vague, missing_key_results]
+        required: false
+      - name: indicator_type
+        type: enum
+        values: [leading, lagging]
+        required: false
 
-  SENTIMENT:
+  ACCOUNTABILITY_SIGNAL:
     enabled: true
-    confidence_threshold: 0.60
+    confidence_threshold: 0.70
     description: >
-      Overall emotional tone, engagement level, and psychological safety indicators.
-      Detect both explicit emotions and implicit signals.
+      Signals of accountability or lack thereof — follow-through on prior
+      commitments, carry-forward patterns, or avoidance of ownership.
     prompt_hint: >
-      Look for engagement signals (asking questions, volunteering, energy),
-      disengagement signals (short answers, deflection, silence), and
-      psychological safety cues (willingness to raise concerns, admit mistakes,
-      ask for help). Also note any IDENTITY TRIGGERS from Stone & Heen — moments
-      where feedback threatens someone's self-image causing defensiveness,
-      shutdown, or emotional reaction.
+      From Lencioni's "5 Dysfunctions": AVOIDANCE OF ACCOUNTABILITY is the
+      4th dysfunction. Look for:
+      - Follow-through references: "I said I'd do X, and I did" (positive)
+      - Carry-forward: "I still haven't done X from last week" (pattern)
+      - Deflection: "That's not really my area", "I was waiting on..." (avoidance)
+      - Peer accountability: one team member holding another to commitments
+      - Manager accountability: manager following up on prior commitments
+      This is NOT about blame — it's about whether the team has a healthy
+      culture of holding each other to high standards.
     attributes:
-      - name: score
-        type: number
-        min: 1
-        max: 5
-      - name: indicators
-        type: list
-      - name: energy_level
+      - name: accountability_type
         type: enum
-        values: [low, medium, high]
-      - name: psychological_safety
-        type: enum
-        values: [safe, guarded, defensive]
-        required: false
-      - name: identity_trigger_detected
-        type: boolean
-        required: false
-
-  DECISION:
-    enabled: true
-    confidence_threshold: 0.80
-    description: "A decision that was explicitly made or agreed upon during the conversation"
-    prompt_hint: >
-      Look for explicit agreement ("Let's go with X", "Decided: Y", "We'll do Z").
-      Capture who made the decision and what alternatives were considered.
-    attributes:
-      - name: decided_by
+        values: [follow_through, carry_forward, deflection, peer_accountability, manager_follow_up]
+      - name: prior_commitment_reference
         type: string
-      - name: impact
+        required: false
+      - name: healthy
+        type: boolean
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # FEEDBACK & GROWTH INTELLIGENCE
+  # Frameworks: Stone & Heen, Kim Scott, Carol Dweck
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  FEEDBACK:
+    enabled: true
+    confidence_threshold: 0.65
+    description: >
+      Feedback given about a person's performance, behavior, or contribution.
+      Classified using Stone & Heen's three types AND Kim Scott's Radical Candor
+      quadrant.
+    prompt_hint: >
+      CLASSIFY EVERY FEEDBACK using TWO frameworks:
+
+      === Stone & Heen "Thanks for the Feedback" — TYPE ===
+      1. APPRECIATION: "I see you" / "you matter" — recognition, gratitude
+      2. COACHING: "Here's how to grow" — advice, guidance, development
+      3. EVALUATION: "Here's where you stand" — rating, ranking, judgment
+
+      === Kim Scott "Radical Candor" — CANDOR QUADRANT ===
+      Based on two axes: Care Personally × Challenge Directly
+      1. RADICAL_CANDOR: Cares AND challenges (kind + clear + specific)
+      2. RUINOUS_EMPATHY: Cares but DOESN'T challenge (nice but unhelpful —
+         withholds hard truths to spare feelings)
+      3. OBNOXIOUS_AGGRESSION: Challenges but DOESN'T care (brutal honesty
+         without empathy)
+      4. MANIPULATIVE_INSINCERITY: Neither cares nor challenges (insincere
+         praise, passive-aggressive, political)
+
+      Also detect:
+      - OBSERVATION vs LABEL: "You approved 3 PRs without comments" (observation)
+        vs "You're not a team player" (label). Observations are actionable;
+        labels trigger defensiveness.
+      - BLIND SPOT surfaced: feedback about something the recipient can't see
+        about themselves (Stone & Heen)
+      - Direction: FORWARD-LOOKING ("next time try X") vs BACKWARD-LOOKING
+        ("you did X wrong")
+    attributes:
+      - name: feedback_type
         type: enum
-        values: [low, medium, high]
-      - name: alternatives_considered
-        type: list
+        required: true
+        values: [appreciation, coaching, evaluation]
+      - name: candor_quadrant
+        type: enum
+        required: false
+        values: [radical_candor, ruinous_empathy, obnoxious_aggression, manipulative_insincerity]
+      - name: recipient
+        type: string
+      - name: giver
+        type: string
+      - name: specificity
+        type: enum
+        values: [observation, label]
+      - name: direction
+        type: enum
+        values: [forward_looking, backward_looking]
+      - name: competency
+        type: string
+        required: false
+      - name: blind_spot_surfaced
+        type: boolean
         required: false
 
   COACHING_MOMENT:
     enabled: true
     confidence_threshold: 0.70
     description: >
-      A moment where someone provides developmental guidance, mentoring, or
-      skill-building advice. Distinct from general feedback — coaching moments
-      are specifically aimed at helping someone grow.
+      Developmental guidance, mentoring, or skill-building moment — specifically
+      aimed at helping someone grow (Stone & Heen: coaching).
     prompt_hint: >
-      From Stone & Heen: coaching is about helping someone learn and grow.
+      Coaching is about helping someone LEARN AND GROW (Stone & Heen).
       Look for:
-      - Skill development suggestions ("Try this approach", "Here's how I'd do it")
-      - Experience sharing for growth ("When I was in your role...")
-      - Reframing challenges as learning ("This is a great opportunity to learn X")
-      - Career development guidance ("For your next role, you'll need...")
-      - Mentoring moments between senior and junior participants
-      Do NOT classify general positive feedback as coaching. Coaching must have
-      a growth/learning element.
+      - Skill development: "Try this approach", "Here's how I'd do it"
+      - Experience sharing: "When I was in your role..."
+      - Reframing challenges as learning: "This is a great opportunity to learn X"
+      - Career development: "For your next role, you'll need..."
+      - Mentoring: senior helping junior grow
+      Do NOT classify general positive feedback as coaching. Coaching MUST have
+      a growth/learning/development element.
     attributes:
       - name: coach
         type: string
@@ -236,18 +298,18 @@ extraction_types:
     enabled: true
     confidence_threshold: 0.70
     description: >
-      Explicit appreciation or recognition of someone's work, effort, or
-      contribution. From Stone & Heen: appreciation says "I see you" and
-      "you matter" — it's about human connection, not evaluation.
+      Appreciation that says "I see you" and "you matter" — about human
+      connection, not evaluation (Stone & Heen: appreciation).
     prompt_hint: >
-      From Stone & Heen: appreciation is distinct from evaluation. "Your work
-      was outstanding" is evaluation. "I really appreciate you staying late to
-      help the team" is appreciation. Look for:
-      - Gratitude expressions ("Thanks for...", "I appreciate...")
-      - Acknowledgment of effort ("I know how hard you worked on...")
-      - Visibility/recognition ("I mentioned your work to the VP")
-      - Team contribution recognition ("The team couldn't have done it without you")
+      From Stone & Heen: appreciation is DISTINCT from evaluation.
+      "Your work was outstanding" = evaluation (judgment).
+      "I really appreciate you staying late to help" = appreciation (connection).
       The key test: does it make the recipient feel SEEN and VALUED?
+      Look for:
+      - Gratitude: "Thanks for...", "I appreciate..."
+      - Acknowledgment of effort: "I know how hard you worked..."
+      - Visibility: "I mentioned your work to the VP"
+      - Team recognition: "Couldn't have done it without you"
     attributes:
       - name: recipient
         type: string
@@ -258,10 +320,140 @@ extraction_types:
         values: [private, team, leadership, public]
         required: false
 
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # PEOPLE & TEAM INTELLIGENCE
+  # Frameworks: Edmondson, Dweck, Pink
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  PSYCHOLOGICAL_SAFETY:
+    enabled: true
+    confidence_threshold: 0.65
+    description: >
+      Signals of psychological safety or its absence — the shared belief that
+      the team is safe for interpersonal risk-taking (Amy Edmondson).
+    prompt_hint: >
+      From Amy Edmondson's "The Fearless Organization" and Timothy Clark's
+      4 stages of psychological safety:
+
+      Stage 1 — INCLUSION SAFETY: feeling accepted as team member
+        Positive: welcoming, including, asking for input
+        Negative: cliques, exclusion, ignoring someone
+
+      Stage 2 — LEARNER SAFETY: safe to ask questions and make mistakes
+        Positive: "I don't know", "Can you explain?", admitting errors
+        Negative: pretending to know, hiding mistakes, fear of looking stupid
+
+      Stage 3 — CONTRIBUTOR SAFETY: safe to offer ideas and participate
+        Positive: volunteering ideas, offering help, taking initiative
+        Negative: holding back, only speaking when asked, minimal responses
+
+      Stage 4 — CHALLENGER SAFETY: safe to challenge status quo
+        Positive: "I disagree because...", "Have we considered...",
+          pushing back on a manager's idea respectfully
+        Negative: silence after a bad idea, going along to avoid conflict
+
+      Look for BEHAVIORAL SIGNALS, not just words:
+      - Short answers vs engaged discussion
+      - Questions asked vs silence
+      - Mistakes admitted vs hidden
+      - Disagreement voiced vs suppressed
+    attributes:
+      - name: stage
+        type: enum
+        values: [inclusion, learner, contributor, challenger]
+      - name: signal_type
+        type: enum
+        values: [positive, negative]
+      - name: indicator
+        type: string
+      - name: who
+        type: string
+        required: false
+
+  MINDSET_SIGNAL:
+    enabled: true
+    confidence_threshold: 0.65
+    description: >
+      Growth mindset vs fixed mindset language and beliefs detected in
+      conversation (Carol Dweck).
+    prompt_hint: >
+      From Carol Dweck's "Mindset" research:
+
+      GROWTH MINDSET language/beliefs:
+      - "I haven't learned that yet" (yet is the key word)
+      - "This is challenging but I'm improving"
+      - "What can I learn from this failure?"
+      - Embracing effort: "The hard work is paying off"
+      - Seeking feedback: "What should I do differently?"
+      - Praising process/effort over talent
+
+      FIXED MINDSET language/beliefs:
+      - "I'm not good at X" (permanent self-label)
+      - "I can't do that" (no possibility of growth)
+      - "That's just not my strength"
+      - Avoiding challenges: "Let someone else handle that"
+      - Threatened by others' success
+      - Praising talent over effort: "You're so smart" (vs "Your approach was clever")
+
+      IMPORTANT: Also detect when a MANAGER reinforces fixed or growth mindset
+      in others through their praise patterns. "You're brilliant" (fixed) vs
+      "Your persistence on that debugging was impressive" (growth).
+    attributes:
+      - name: mindset_type
+        type: enum
+        values: [growth, fixed]
+      - name: who
+        type: string
+      - name: signal
+        type: string
+      - name: manager_reinforcement
+        type: boolean
+        required: false
+
+  SENTIMENT:
+    enabled: true
+    confidence_threshold: 0.60
+    description: >
+      Overall emotional tone, engagement level, and motivational signals.
+    prompt_hint: >
+      From Daniel Pink's "Drive" — intrinsic motivation comes from three needs:
+      1. AUTONOMY: desire to direct our own lives/work
+      2. MASTERY: urge to get better at something that matters
+      3. PURPOSE: yearning to do what we do in service of something larger
+
+      Detect which motivational driver is present or missing:
+      - Autonomy signals: "I chose to...", "Can I own this?" vs "Just tell me what to do"
+      - Mastery signals: "I'm getting better at...", deep engagement vs "Good enough"
+      - Purpose signals: "This matters because...", connecting work to impact vs "Just checking the box"
+
+      Also detect disengagement: short answers, lack of enthusiasm, going through
+      motions, "whatever you think" (learned helplessness).
+    attributes:
+      - name: score
+        type: number
+        min: 1
+        max: 5
+      - name: energy_level
+        type: enum
+        values: [low, medium, high]
+      - name: motivational_driver
+        type: enum
+        values: [autonomy, mastery, purpose, none_detected]
+        required: false
+      - name: engagement
+        type: enum
+        values: [highly_engaged, engaged, neutral, disengaged]
+        required: false
+
 summary:
   enabled: true
-  max_length: 250
+  max_length: 300
   style: >
-    concise, action-oriented. Highlight key decisions, open commitments,
-    unresolved blockers, and any feedback themes. Note if feedback was
-    primarily appreciation, coaching, or evaluation.
+    concise, insight-driven. Structure as:
+    1. KEY DECISIONS made
+    2. OPEN COMMITMENTS with owners and deadlines
+    3. UNRESOLVED BLOCKERS requiring escalation
+    4. FEEDBACK QUALITY: was feedback mostly appreciation, coaching, or evaluation?
+       Was it radical candor or ruinous empathy?
+    5. TEAM HEALTH SIGNALS: psychological safety level, growth/fixed mindset patterns
+    6. ACCOUNTABILITY: any carry-forward patterns or follow-through gaps
