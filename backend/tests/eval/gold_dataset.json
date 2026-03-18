@@ -21,9 +21,10 @@
       {"extraction_type": "COMMITMENT", "description_contains": ["sync", "Deepak", "checkout", "Wednesday"], "min_confidence": 0.75},
       {"extraction_type": "COMMITMENT", "description_contains": ["go/no-go", "review", "Friday"], "min_confidence": 0.70},
       {"extraction_type": "GOAL_UPDATE", "description_contains": ["payments", "API", "migration", "on track"], "min_confidence": 0.65},
-      {"extraction_type": "ACTION_ITEM", "description_contains": ["sync", "checkout", "Deepak"], "min_confidence": 0.70}
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["sync", "checkout", "Deepak"], "min_confidence": 0.70},
+      {"extraction_type": "ACCOUNTABILITY_SIGNAL", "description_contains": ["progress", "schema", "finished", "backfill"], "min_confidence": 0.60}
     ],
-    "expected_absent": [],
+    "expected_absent": ["RECOGNITION", "COACHING_MOMENT"],
     "tags": ["clear", "1on1", "deadline", "migration"]
   },
   {
@@ -47,9 +48,10 @@
       {"extraction_type": "BLOCKER", "description_contains": ["Elasticsearch", "disk", "search", "indexing"], "min_confidence": 0.80},
       {"extraction_type": "COMMITMENT", "description_contains": ["Vikram", "unblocked", "today"], "min_confidence": 0.80},
       {"extraction_type": "COMMITMENT", "description_contains": ["catalog", "indexed", "two days"], "min_confidence": 0.70},
-      {"extraction_type": "ACTION_ITEM", "description_contains": ["Jira", "monitoring", "alerts"], "min_confidence": 0.75}
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["Jira", "monitoring", "alerts"], "min_confidence": 0.75},
+      {"extraction_type": "ACCOUNTABILITY_SIGNAL", "description_contains": ["ticket", "platform team", "haven't heard back"], "min_confidence": 0.60}
     ],
-    "expected_absent": ["FEEDBACK"],
+    "expected_absent": ["FEEDBACK", "RECOGNITION", "COACHING_MOMENT"],
     "tags": ["clear", "1on1", "blocker", "escalation"]
   },
   {
@@ -70,11 +72,13 @@
       {"speaker": "Arjun Mehta", "text": "I'd love that. I'll draft a growth plan and share it with you next week.", "startTime": 30, "endTime": 35}
     ],
     "expected_extractions": [
-      {"extraction_type": "FEEDBACK", "description_contains": ["architecture", "solid", "notification"], "min_confidence": 0.70},
+      {"extraction_type": "RECOGNITION", "description_contains": ["architecture", "solid", "notification"], "min_confidence": 0.70},
       {"extraction_type": "FEEDBACK", "description_contains": ["documentation", "README", "onboard"], "min_confidence": 0.70},
+      {"extraction_type": "COACHING_MOMENT", "description_contains": ["tech lead", "Q3", "growth"], "min_confidence": 0.65},
       {"extraction_type": "COMMITMENT", "description_contains": ["docs", "sprint", "diagrams", "runbook"], "min_confidence": 0.75},
       {"extraction_type": "COMMITMENT", "description_contains": ["growth plan", "next week"], "min_confidence": 0.75},
-      {"extraction_type": "GOAL_UPDATE", "description_contains": ["tech lead", "Q3"], "min_confidence": 0.60}
+      {"extraction_type": "GOAL_UPDATE", "description_contains": ["tech lead", "Q3"], "min_confidence": 0.60},
+      {"extraction_type": "MINDSET_SIGNAL", "description_contains": ["spent", "time", "retry logic", "effort"], "min_confidence": 0.55}
     ],
     "expected_absent": ["BLOCKER"],
     "tags": ["clear", "1on1", "feedback", "growth"]
@@ -100,9 +104,11 @@
       {"extraction_type": "COMMITMENT", "description_contains": ["on-call", "rotation", "Monday"], "min_confidence": 0.80},
       {"extraction_type": "DECISION", "description_contains": ["caching", "next sprint"], "min_confidence": 0.75},
       {"extraction_type": "ACTION_ITEM", "description_contains": ["auth refactor", "close"], "min_confidence": 0.65},
-      {"extraction_type": "GOAL_UPDATE", "description_contains": ["velocity", "dropped", "30%"], "min_confidence": 0.60}
+      {"extraction_type": "GOAL_UPDATE", "description_contains": ["velocity", "dropped", "30%"], "min_confidence": 0.60},
+      {"extraction_type": "ACCOUNTABILITY_SIGNAL", "description_contains": ["caching", "carryover", "won't finish"], "min_confidence": 0.60},
+      {"extraction_type": "PSYCHOLOGICAL_SAFETY", "description_contains": ["honestly", "pulled into", "incident"], "min_confidence": 0.55}
     ],
-    "expected_absent": [],
+    "expected_absent": ["RECOGNITION"],
     "tags": ["clear", "1on1", "workload", "sprint"]
   },
   {
@@ -123,11 +129,13 @@
       {"speaker": "Nisha Patel", "text": "I'd love that! I'll start scoping it tomorrow.", "startTime": 33, "endTime": 36}
     ],
     "expected_extractions": [
-      {"extraction_type": "FEEDBACK", "description_contains": ["PR", "clean", "test coverage"], "min_confidence": 0.70},
+      {"extraction_type": "RECOGNITION", "description_contains": ["PR", "clean", "test coverage"], "min_confidence": 0.70},
       {"extraction_type": "BLOCKER", "description_contains": ["deployment", "pipeline", "docs", "outdated"], "min_confidence": 0.60},
       {"extraction_type": "ACTION_ITEM", "description_contains": ["Amit", "deployment", "docs", "update"], "min_confidence": 0.70},
       {"extraction_type": "COMMITMENT", "description_contains": ["email template", "migration", "scoping", "tomorrow"], "min_confidence": 0.70},
-      {"extraction_type": "SENTIMENT", "description_contains": ["settling", "well", "positive"], "min_confidence": 0.55}
+      {"extraction_type": "SENTIMENT", "description_contains": ["settling", "well", "positive"], "min_confidence": 0.55},
+      {"extraction_type": "PSYCHOLOGICAL_SAFETY", "description_contains": ["struggling", "deployment", "ask", "three times"], "min_confidence": 0.60},
+      {"extraction_type": "MINDSET_SIGNAL", "description_contains": ["love", "solo project", "scoping"], "min_confidence": 0.55}
     ],
     "expected_absent": [],
     "tags": ["clear", "1on1", "onboarding", "new_joiner"]
@@ -156,7 +164,8 @@
       {"extraction_type": "GOAL_UPDATE", "description_contains": ["analytics", "dashboard", "aggregation"], "min_confidence": 0.65},
       {"extraction_type": "BLOCKER", "description_contains": ["S3", "presigned URL", "access denied"], "min_confidence": 0.80},
       {"extraction_type": "COMMITMENT", "description_contains": ["pair", "Karthik", "after standup"], "min_confidence": 0.75},
-      {"extraction_type": "COMMITMENT", "description_contains": ["dashboard", "QA", "Thursday"], "min_confidence": 0.70}
+      {"extraction_type": "COMMITMENT", "description_contains": ["dashboard", "QA", "Thursday"], "min_confidence": 0.70},
+      {"extraction_type": "COACHING_MOMENT", "description_contains": ["IAM", "pair", "dealt with", "last quarter"], "min_confidence": 0.60}
     ],
     "expected_absent": ["FEEDBACK"],
     "tags": ["standup", "team", "blockers"]
@@ -185,9 +194,10 @@
       {"extraction_type": "BLOCKER", "description_contains": ["contract", "inventory", "Farhan"], "min_confidence": 0.75},
       {"extraction_type": "ACTION_ITEM", "description_contains": ["follow up", "Farhan"], "min_confidence": 0.70},
       {"extraction_type": "GOAL_UPDATE", "description_contains": ["rate limiter", "staging", "latency", "50ms"], "min_confidence": 0.65},
-      {"extraction_type": "FEEDBACK", "description_contains": ["latency", "excellent", "Ritu"], "min_confidence": 0.60},
+      {"extraction_type": "RECOGNITION", "description_contains": ["latency", "excellent", "Ritu"], "min_confidence": 0.60},
       {"extraction_type": "DECISION", "description_contains": ["exponential backoff", "5 retries"], "min_confidence": 0.75},
-      {"extraction_type": "COMMITMENT", "description_contains": ["runbook", "today"], "min_confidence": 0.70}
+      {"extraction_type": "COMMITMENT", "description_contains": ["runbook", "today"], "min_confidence": 0.70},
+      {"extraction_type": "PSYCHOLOGICAL_SAFETY", "description_contains": ["question", "exponential backoff", "fixed intervals"], "min_confidence": 0.55}
     ],
     "expected_absent": [],
     "tags": ["standup", "team", "cross-team", "dependency"]
@@ -214,9 +224,11 @@
       {"extraction_type": "COMMITMENT", "description_contains": ["SSO", "tomorrow", "EOD"], "min_confidence": 0.70},
       {"extraction_type": "GOAL_UPDATE", "description_contains": ["logging", "pipeline", "behind", "Kafka"], "min_confidence": 0.65},
       {"extraction_type": "DECISION", "description_contains": ["Grafana", "next sprint", "push"], "min_confidence": 0.75},
-      {"extraction_type": "ACTION_ITEM", "description_contains": ["unit tests", "tickets"], "min_confidence": 0.70}
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["unit tests", "tickets"], "min_confidence": 0.70},
+      {"extraction_type": "PSYCHOLOGICAL_SAFETY", "description_contains": ["behind", "honestly", "Kafka", "ate up"], "min_confidence": 0.55},
+      {"extraction_type": "ACCOUNTABILITY_SIGNAL", "description_contains": ["Grafana", "push", "next sprint", "behind"], "min_confidence": 0.55}
     ],
-    "expected_absent": [],
+    "expected_absent": ["RECOGNITION"],
     "tags": ["standup", "team", "sprint_end"]
   },
   {
@@ -239,11 +251,13 @@
     ],
     "expected_extractions": [
       {"extraction_type": "FEEDBACK", "description_contains": ["payment reconciliation", "outstanding", "zero incidents"], "min_confidence": 0.80},
-      {"extraction_type": "FEEDBACK", "description_contains": ["mentoring", "code reviews", "patient"], "min_confidence": 0.70},
+      {"extraction_type": "RECOGNITION", "description_contains": ["mentoring", "code reviews", "patient"], "min_confidence": 0.70},
       {"extraction_type": "FEEDBACK", "description_contains": ["communication", "stakeholders", "improvement"], "min_confidence": 0.75},
       {"extraction_type": "FEEDBACK", "description_contains": ["design docs", "terse", "tradeoffs"], "min_confidence": 0.70},
       {"extraction_type": "COMMITMENT", "description_contains": ["weekly", "updates", "Monday"], "min_confidence": 0.80},
-      {"extraction_type": "ACTION_ITEM", "description_contains": ["weekly", "status", "emails", "product"], "min_confidence": 0.70}
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["weekly", "status", "emails", "product"], "min_confidence": 0.70},
+      {"extraction_type": "FEEDBACK", "description_contains": ["Exceeds Expectations", "rating"], "min_confidence": 0.65},
+      {"extraction_type": "MINDSET_SIGNAL", "description_contains": ["effort", "test suite", "canary"], "min_confidence": 0.55}
     ],
     "expected_absent": ["BLOCKER"],
     "tags": ["feedback", "performance_review", "quarterly"]
@@ -266,11 +280,13 @@
       {"speaker": "Gaurav Sinha", "text": "That's fair. I'll commit to better communication and I'll have the notification service auth module done by next Wednesday.", "startTime": 37, "endTime": 44}
     ],
     "expected_extractions": [
-      {"extraction_type": "FEEDBACK", "description_contains": ["delivery", "40%", "story points", "underperformance"], "min_confidence": 0.75},
+      {"extraction_type": "FEEDBACK", "description_contains": ["delivery", "40%", "story points"], "min_confidence": 0.75},
       {"extraction_type": "FEEDBACK", "description_contains": ["flag", "earlier", "communication"], "min_confidence": 0.70},
       {"extraction_type": "DECISION", "description_contains": ["legacy migration", "off", "plate", "notification"], "min_confidence": 0.75},
       {"extraction_type": "ACTION_ITEM", "description_contains": ["daily", "check-ins", "two weeks"], "min_confidence": 0.70},
-      {"extraction_type": "COMMITMENT", "description_contains": ["notification", "auth", "Wednesday"], "min_confidence": 0.80}
+      {"extraction_type": "COMMITMENT", "description_contains": ["notification", "auth", "Wednesday"], "min_confidence": 0.80},
+      {"extraction_type": "ACCOUNTABILITY_SIGNAL", "description_contains": ["40%", "committed", "story points", "slippage"], "min_confidence": 0.70},
+      {"extraction_type": "PSYCHOLOGICAL_SAFETY", "description_contains": ["honest conversation", "not happy", "should have raised"], "min_confidence": 0.60}
     ],
     "expected_absent": [],
     "tags": ["feedback", "difficult_conversation", "underperformance"]
@@ -293,9 +309,10 @@
       {"speaker": "Nikhil Agarwal", "text": "I'll work on that. I'll rewrite the RFC summary this week as practice and share it with you for feedback.", "startTime": 36, "endTime": 42}
     ],
     "expected_extractions": [
-      {"extraction_type": "FEEDBACK", "description_contains": ["distributed tracing", "technical depth", "positive"], "min_confidence": 0.75},
-      {"extraction_type": "FEEDBACK", "description_contains": ["cross-team", "influence", "growth"], "min_confidence": 0.70},
+      {"extraction_type": "FEEDBACK", "description_contains": ["distributed tracing", "technical depth"], "min_confidence": 0.75},
+      {"extraction_type": "COACHING_MOMENT", "description_contains": ["cross-team", "influence", "alignment", "working group"], "min_confidence": 0.65},
       {"extraction_type": "FEEDBACK", "description_contains": ["written communication", "RFC", "shorter"], "min_confidence": 0.70},
+      {"extraction_type": "COACHING_MOMENT", "description_contains": ["executive summaries", "practice", "writing"], "min_confidence": 0.60},
       {"extraction_type": "ACTION_ITEM", "description_contains": ["API standards", "working group", "lead"], "min_confidence": 0.65},
       {"extraction_type": "COMMITMENT", "description_contains": ["RFC", "summary", "rewrite", "this week"], "min_confidence": 0.75},
       {"extraction_type": "GOAL_UPDATE", "description_contains": ["staff engineer", "promotion"], "min_confidence": 0.60}
@@ -320,7 +337,7 @@
       {"speaker": "Amit Shah", "text": "Cool, let's figure it out. Anyway, back to debugging this flaky test.", "startTime": 17, "endTime": 21}
     ],
     "expected_extractions": [],
-    "expected_absent": ["COMMITMENT", "BLOCKER", "ACTION_ITEM", "DECISION", "GOAL_UPDATE"],
+    "expected_absent": ["COMMITMENT", "BLOCKER", "ACTION_ITEM", "DECISION", "GOAL_UPDATE", "FEEDBACK", "COACHING_MOMENT", "RECOGNITION", "ACCOUNTABILITY_SIGNAL"],
     "tags": ["ambiguous", "casual", "no_actionable"]
   },
   {
@@ -339,7 +356,7 @@
       {"speaker": "Harsh Vardhan", "text": "Yeah, no rush. Something to consider when we have bandwidth.", "startTime": 14, "endTime": 18}
     ],
     "expected_extractions": [],
-    "expected_absent": ["COMMITMENT", "ACTION_ITEM", "DECISION", "BLOCKER"],
+    "expected_absent": ["COMMITMENT", "ACTION_ITEM", "DECISION", "BLOCKER", "FEEDBACK", "COACHING_MOMENT", "RECOGNITION", "ACCOUNTABILITY_SIGNAL"],
     "tags": ["ambiguous", "brainstorming", "vague"]
   },
   {
@@ -359,7 +376,7 @@
       {"speaker": "Deepika Rana", "text": "I'll add it to my list! Glad you had a good break. See you at standup tomorrow.", "startTime": 19, "endTime": 24}
     ],
     "expected_extractions": [],
-    "expected_absent": ["COMMITMENT", "BLOCKER", "ACTION_ITEM", "DECISION", "GOAL_UPDATE", "FEEDBACK"],
+    "expected_absent": ["COMMITMENT", "BLOCKER", "ACTION_ITEM", "DECISION", "GOAL_UPDATE", "FEEDBACK", "COACHING_MOMENT", "RECOGNITION", "ACCOUNTABILITY_SIGNAL", "MINDSET_SIGNAL"],
     "tags": ["ambiguous", "social", "no_work"]
   },
   {
@@ -395,7 +412,8 @@
       {"extraction_type": "COMMITMENT", "description_contains": ["RFC", "design doc", "tomorrow"], "min_confidence": 0.80},
       {"extraction_type": "COMMITMENT", "description_contains": ["prototype", "WebSocket", "Tuesday"], "min_confidence": 0.80},
       {"extraction_type": "COMMITMENT", "description_contains": ["Firebase", "adapter", "Preeti"], "min_confidence": 0.70},
-      {"extraction_type": "ACTION_ITEM", "description_contains": ["reconvene", "Thursday", "calendar"], "min_confidence": 0.70}
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["reconvene", "Thursday", "calendar"], "min_confidence": 0.70},
+      {"extraction_type": "PSYCHOLOGICAL_SAFETY", "description_contains": ["concern", "Redis", "down", "Dev"], "min_confidence": 0.55}
     ],
     "expected_absent": ["FEEDBACK"],
     "tags": ["long", "architecture", "decisions", "multiple_speakers"]
@@ -432,7 +450,9 @@
       {"extraction_type": "COMMITMENT", "description_contains": ["Grafana", "dashboard", "Wednesday"], "min_confidence": 0.75},
       {"extraction_type": "COMMITMENT", "description_contains": ["PR", "within the hour", "query fix"], "min_confidence": 0.75},
       {"extraction_type": "COMMITMENT", "description_contains": ["alerts", "today", "runbook"], "min_confidence": 0.70},
-      {"extraction_type": "DECISION", "description_contains": ["query plan", "review", "mandatory"], "min_confidence": 0.75}
+      {"extraction_type": "DECISION", "description_contains": ["query plan", "review", "mandatory"], "min_confidence": 0.75},
+      {"extraction_type": "PSYCHOLOGICAL_SAFETY", "description_contains": ["my PR", "missed", "should have tested"], "min_confidence": 0.65},
+      {"extraction_type": "ACCOUNTABILITY_SIGNAL", "description_contains": ["my PR", "missed", "full table scan"], "min_confidence": 0.60}
     ],
     "expected_absent": [],
     "tags": ["long", "post-mortem", "incident", "action_items"]
@@ -469,7 +489,7 @@
       {"extraction_type": "DECISION", "description_contains": ["6 points", "buffer", "bug fixes"], "min_confidence": 0.70},
       {"extraction_type": "ACTION_ITEM", "description_contains": ["address team", "timeline", "check"], "min_confidence": 0.70}
     ],
-    "expected_absent": ["FEEDBACK"],
+    "expected_absent": ["FEEDBACK", "RECOGNITION", "COACHING_MOMENT"],
     "tags": ["long", "sprint_planning", "estimation"]
   },
   {
@@ -490,7 +510,7 @@
       {"extraction_type": "COMMITMENT", "description_contains": ["load tests", "today", "prod", "tomorrow"], "min_confidence": 0.75},
       {"extraction_type": "ACTION_ITEM", "description_contains": ["sign-off", "SRE", "prod"], "min_confidence": 0.65}
     ],
-    "expected_absent": ["FEEDBACK", "BLOCKER"],
+    "expected_absent": ["FEEDBACK", "BLOCKER", "RECOGNITION", "COACHING_MOMENT"],
     "tags": ["short", "quick_update"]
   },
   {
@@ -508,7 +528,7 @@
     "expected_extractions": [
       {"extraction_type": "BLOCKER", "description_contains": ["CI pipeline", "Docker", "base image", "registry"], "min_confidence": 0.80}
     ],
-    "expected_absent": ["COMMITMENT", "FEEDBACK", "GOAL_UPDATE", "DECISION"],
+    "expected_absent": ["COMMITMENT", "FEEDBACK", "GOAL_UPDATE", "DECISION", "RECOGNITION", "COACHING_MOMENT", "ACCOUNTABILITY_SIGNAL"],
     "tags": ["short", "single_segment", "blocker"]
   },
   {
@@ -532,7 +552,8 @@
       {"extraction_type": "GOAL_UPDATE", "description_contains": ["search", "80%", "latency", "40ms"], "min_confidence": 0.65},
       {"extraction_type": "BLOCKER", "description_contains": ["ML team", "model", "respond", "ranking"], "min_confidence": 0.70},
       {"extraction_type": "COMMITMENT", "description_contains": ["Ashish", "ML team", "Thursday", "unblock"], "min_confidence": 0.75},
-      {"extraction_type": "COMMITMENT", "description_contains": ["Monday", "complete", "search"], "min_confidence": 0.70}
+      {"extraction_type": "COMMITMENT", "description_contains": ["Monday", "complete", "search"], "min_confidence": 0.70},
+      {"extraction_type": "RECOGNITION", "description_contains": ["impressive", "numbers", "latency"], "min_confidence": 0.55}
     ],
     "expected_absent": [],
     "tags": ["hinglish", "mixed_language", "actionable"]
@@ -559,9 +580,10 @@
       {"extraction_type": "BLOCKER", "description_contains": ["ConfigMap", "reload", "pods", "config"], "min_confidence": 0.70},
       {"extraction_type": "ACTION_ITEM", "description_contains": ["Reloader", "sidecar", "today"], "min_confidence": 0.75},
       {"extraction_type": "ACTION_ITEM", "description_contains": ["verify", "staging", "test deployment"], "min_confidence": 0.65},
-      {"extraction_type": "DECISION", "description_contains": ["rolling restart", "automate", "next sprint"], "min_confidence": 0.65}
+      {"extraction_type": "DECISION", "description_contains": ["rolling restart", "automate", "next sprint"], "min_confidence": 0.65},
+      {"extraction_type": "ACCOUNTABILITY_SIGNAL", "description_contains": ["flagged last month", "pending too long"], "min_confidence": 0.60}
     ],
-    "expected_absent": ["FEEDBACK"],
+    "expected_absent": ["FEEDBACK", "RECOGNITION"],
     "tags": ["hinglish", "deployment", "mixed_language"]
   },
   {
@@ -578,7 +600,7 @@
       {"speaker": "Test User", "text": "\n\n", "startTime": 2, "endTime": 3}
     ],
     "expected_extractions": [],
-    "expected_absent": ["COMMITMENT", "BLOCKER", "FEEDBACK", "GOAL_UPDATE", "ACTION_ITEM", "SENTIMENT", "DECISION"],
+    "expected_absent": ["COMMITMENT", "BLOCKER", "FEEDBACK", "GOAL_UPDATE", "ACTION_ITEM", "SENTIMENT", "DECISION", "COACHING_MOMENT", "RECOGNITION", "PSYCHOLOGICAL_SAFETY", "MINDSET_SIGNAL", "ACCOUNTABILITY_SIGNAL"],
     "tags": ["edge_case", "empty", "whitespace"]
   },
   {
@@ -598,7 +620,7 @@
       {"speaker": "Speaker One", "text": "Bye", "startTime": 4, "endTime": 5}
     ],
     "expected_extractions": [],
-    "expected_absent": ["COMMITMENT", "BLOCKER", "FEEDBACK", "GOAL_UPDATE", "ACTION_ITEM", "DECISION"],
+    "expected_absent": ["COMMITMENT", "BLOCKER", "FEEDBACK", "GOAL_UPDATE", "ACTION_ITEM", "DECISION", "COACHING_MOMENT", "RECOGNITION", "PSYCHOLOGICAL_SAFETY", "MINDSET_SIGNAL", "ACCOUNTABILITY_SIGNAL"],
     "tags": ["edge_case", "single_word", "minimal"]
   },
   {
@@ -626,14 +648,15 @@
       {"extraction_type": "COMMITMENT", "description_contains": ["ingestion", "pipeline", "two weeks", "Omar"], "min_confidence": 0.80},
       {"extraction_type": "COMMITMENT", "description_contains": ["cluster", "provisioned", "end of this week", "Smita"], "min_confidence": 0.80},
       {"extraction_type": "ACTION_ITEM", "description_contains": ["cluster setup", "Smita"], "min_confidence": 0.70},
-      {"extraction_type": "ACTION_ITEM", "description_contains": ["data ingestion", "Kafka", "ClickHouse", "Omar"], "min_confidence": 0.70}
+      {"extraction_type": "ACTION_ITEM", "description_contains": ["data ingestion", "Kafka", "ClickHouse", "Omar"], "min_confidence": 0.70},
+      {"extraction_type": "PSYCHOLOGICAL_SAFETY", "description_contains": ["BigQuery", "alternatives", "Omar", "considered"], "min_confidence": 0.50}
     ],
-    "expected_absent": ["FEEDBACK", "BLOCKER"],
+    "expected_absent": ["FEEDBACK", "BLOCKER", "RECOGNITION", "COACHING_MOMENT"],
     "tags": ["decision", "technical", "tradeoff"]
   },
   {
     "id": "gold_025",
-    "name": "All-types — Dense conversation hitting all 7 extraction types",
+    "name": "All-types — Dense conversation hitting all 12 extraction types",
     "category": "all_types",
     "profile": "performance",
     "participants": [
@@ -659,11 +682,15 @@
       {"extraction_type": "BLOCKER", "description_contains": ["Razorpay", "sandbox", "API keys"], "min_confidence": 0.80},
       {"extraction_type": "COMMITMENT", "description_contains": ["escalate", "account manager", "today", "Wednesday"], "min_confidence": 0.75},
       {"extraction_type": "COMMITMENT", "description_contains": ["integration", "QA", "Friday"], "min_confidence": 0.75},
-      {"extraction_type": "FEEDBACK", "description_contains": ["code review", "excellent", "thorough"], "min_confidence": 0.70},
+      {"extraction_type": "RECOGNITION", "description_contains": ["code review", "excellent", "thorough", "appreciates"], "min_confidence": 0.70},
       {"extraction_type": "FEEDBACK", "description_contains": ["gold-plate", "abstraction", "simpler", "YAGNI"], "min_confidence": 0.70},
+      {"extraction_type": "COACHING_MOMENT", "description_contains": ["gold-plate", "simpler", "YAGNI", "keep it simpler"], "min_confidence": 0.60},
       {"extraction_type": "DECISION", "description_contains": ["biweekly", "releases", "weekly"], "min_confidence": 0.80},
       {"extraction_type": "ACTION_ITEM", "description_contains": ["CI/CD", "pipeline", "config", "schedule"], "min_confidence": 0.70},
-      {"extraction_type": "SENTIMENT", "description_contains": ["burnt out", "draining", "intense"], "min_confidence": 0.60}
+      {"extraction_type": "SENTIMENT", "description_contains": ["burnt out", "draining", "intense"], "min_confidence": 0.60},
+      {"extraction_type": "PSYCHOLOGICAL_SAFETY", "description_contains": ["honestly", "burnt out", "draining"], "min_confidence": 0.60},
+      {"extraction_type": "MINDSET_SIGNAL", "description_contains": ["deliberate", "more mindful", "YAGNI"], "min_confidence": 0.55},
+      {"extraction_type": "ACCOUNTABILITY_SIGNAL", "description_contains": ["emailed", "twice", "no response", "Razorpay"], "min_confidence": 0.55}
     ],
     "expected_absent": [],
     "tags": ["all_types", "comprehensive", "dense"]

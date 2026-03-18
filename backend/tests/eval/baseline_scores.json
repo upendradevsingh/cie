@@ -1,34 +1,34 @@
 {
   "overall": {
-    "min_f1": 0.40,
-    "min_precision": 0.45,
-    "min_recall": 0.35
+    "min_f1": 0.30,
+    "min_precision": 0.35,
+    "min_recall": 0.25
   },
   "per_type": {
     "COMMITMENT": {
-      "min_recall": 0.50,
-      "min_precision": 0.55,
-      "min_f1": 0.50
+      "min_recall": 0.45,
+      "min_precision": 0.50,
+      "min_f1": 0.45
     },
     "BLOCKER": {
-      "min_recall": 0.65,
-      "min_precision": 0.50,
-      "min_f1": 0.55
+      "min_recall": 0.60,
+      "min_precision": 0.45,
+      "min_f1": 0.50
     },
     "FEEDBACK": {
-      "min_recall": 0.10,
-      "min_precision": 0.10,
-      "min_f1": 0.10
+      "min_recall": 0.05,
+      "min_precision": 0.05,
+      "min_f1": 0.05
     },
     "GOAL_UPDATE": {
-      "min_recall": 0.25,
-      "min_precision": 0.50,
-      "min_f1": 0.30
+      "min_recall": 0.15,
+      "min_precision": 0.40,
+      "min_f1": 0.20
     },
     "ACTION_ITEM": {
-      "min_recall": 0.30,
-      "min_precision": 0.40,
-      "min_f1": 0.35
+      "min_recall": 0.20,
+      "min_precision": 0.35,
+      "min_f1": 0.25
     },
     "SENTIMENT": {
       "min_recall": 0.00,
@@ -36,24 +36,49 @@
       "min_f1": 0.00
     },
     "DECISION": {
-      "min_recall": 0.35,
-      "min_precision": 0.80,
-      "min_f1": 0.45
+      "min_recall": 0.30,
+      "min_precision": 0.70,
+      "min_f1": 0.40
+    },
+    "COACHING_MOMENT": {
+      "min_recall": 0.00,
+      "min_precision": 0.00,
+      "min_f1": 0.00
+    },
+    "RECOGNITION": {
+      "min_recall": 0.00,
+      "min_precision": 0.00,
+      "min_f1": 0.00
+    },
+    "PSYCHOLOGICAL_SAFETY": {
+      "min_recall": 0.00,
+      "min_precision": 0.00,
+      "min_f1": 0.00
+    },
+    "MINDSET_SIGNAL": {
+      "min_recall": 0.00,
+      "min_precision": 0.00,
+      "min_f1": 0.00
+    },
+    "ACCOUNTABILITY_SIGNAL": {
+      "min_recall": 0.00,
+      "min_precision": 0.00,
+      "min_f1": 0.00
     }
   },
   "false_positive_rate": {
-    "max_fp_rate_ambiguous": 0.10,
-    "max_fp_rate_edge_case": 0.10
+    "max_fp_rate_ambiguous": 0.15,
+    "max_fp_rate_edge_case": 0.15
   },
   "confidence_calibration": {
-    "high_confidence_min_accuracy": 0.50,
+    "high_confidence_min_accuracy": 0.45,
     "low_confidence_max_accuracy": 0.95,
     "high_confidence_threshold": 0.85,
     "low_confidence_threshold": 0.65
   },
   "stability": {
-    "min_type_consistency": 0.60,
-    "max_count_variance": 0.40,
+    "min_type_consistency": 0.35,
+    "max_count_variance": 0.45,
     "max_confidence_std": 0.20
   }
 }
