@@ -4,6 +4,9 @@
     "name": "Clear 1:1 — API migration commitment with deadline",
     "category": "clear_1on1",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "mgr_01", "name": "Priya Sharma", "role": "engineering_manager"},
       {"externalId": "eng_01", "name": "Rahul Verma", "role": "senior_engineer"}
@@ -32,6 +35,9 @@
     "name": "Clear 1:1 — Blocker escalation with resolution plan",
     "category": "clear_1on1",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "mgr_02", "name": "Ankit Desai", "role": "engineering_manager"},
       {"externalId": "eng_02", "name": "Sneha Kulkarni", "role": "engineer"}
@@ -59,6 +65,9 @@
     "name": "Clear 1:1 — Performance feedback and growth plan",
     "category": "clear_1on1",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "mgr_03", "name": "Meera Nair", "role": "engineering_manager"},
       {"externalId": "eng_03", "name": "Arjun Mehta", "role": "engineer"}
@@ -88,6 +97,9 @@
     "name": "Clear 1:1 — Sprint retro and workload balancing",
     "category": "clear_1on1",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "mgr_04", "name": "Kavita Reddy", "role": "engineering_manager"},
       {"externalId": "eng_04", "name": "Saurabh Joshi", "role": "engineer"}
@@ -116,6 +128,9 @@
     "name": "Clear 1:1 — New joiner onboarding check-in",
     "category": "clear_1on1",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "mgr_05", "name": "Rohan Gupta", "role": "engineering_manager"},
       {"externalId": "eng_05", "name": "Nisha Patel", "role": "junior_engineer"}
@@ -145,6 +160,9 @@
     "name": "Team standup — Three engineers with blockers and updates",
     "category": "team_standup",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "eng_06", "name": "Vikram Singh", "role": "tech_lead"},
       {"externalId": "eng_07", "name": "Pooja Iyer", "role": "engineer"},
@@ -175,6 +193,9 @@
     "name": "Team standup — Cross-team dependency discussion",
     "category": "team_standup",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "eng_09", "name": "Aditi Chakraborty", "role": "tech_lead"},
       {"externalId": "eng_10", "name": "Manish Tiwari", "role": "engineer"},
@@ -207,6 +228,9 @@
     "name": "Team standup — Sprint end crunch with multiple deliverables",
     "category": "team_standup",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "eng_13", "name": "Suresh Menon", "role": "tech_lead"},
       {"externalId": "eng_14", "name": "Divya Krishnan", "role": "engineer"},
@@ -236,6 +260,9 @@
     "name": "Feedback-heavy — Quarterly performance review",
     "category": "feedback_heavy",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "mgr_06", "name": "Lakshmi Sundaram", "role": "engineering_manager"},
       {"externalId": "eng_16", "name": "Pranav Deshpande", "role": "senior_engineer"}
@@ -267,6 +294,9 @@
     "name": "Feedback-heavy — Difficult conversation about underperformance",
     "category": "feedback_heavy",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "mgr_07", "name": "Rajesh Khanna", "role": "engineering_manager"},
       {"externalId": "eng_17", "name": "Gaurav Sinha", "role": "engineer"}
@@ -296,6 +326,9 @@
     "name": "Feedback-heavy — Promotion discussion with constructive areas",
     "category": "feedback_heavy",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "mgr_08", "name": "Swati Bhatia", "role": "engineering_director"},
       {"externalId": "eng_18", "name": "Nikhil Agarwal", "role": "senior_engineer"}
@@ -325,6 +358,9 @@
     "name": "Ambiguous — Casual hallway chat about weekend",
     "category": "ambiguous",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "eng_19", "name": "Amit Shah", "role": "engineer"},
       {"externalId": "eng_20", "name": "Neha Rawat", "role": "engineer"}
@@ -345,6 +381,9 @@
     "name": "Ambiguous — Vague brainstorming with no concrete outcomes",
     "category": "ambiguous",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "eng_21", "name": "Tanvi Kapoor", "role": "engineer"},
       {"externalId": "eng_22", "name": "Harsh Vardhan", "role": "engineer"}
@@ -364,6 +403,9 @@
     "name": "Ambiguous — Social check-in with no work discussion",
     "category": "ambiguous",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "mgr_09", "name": "Deepika Rana", "role": "engineering_manager"},
       {"externalId": "eng_23", "name": "Farhan Qureshi", "role": "engineer"}
@@ -384,6 +426,9 @@
     "name": "Long conversation — Architecture review with multiple decisions",
     "category": "long",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "eng_24", "name": "Arun Prakash", "role": "staff_engineer"},
       {"externalId": "eng_25", "name": "Megha Gupta", "role": "senior_engineer"},
@@ -423,6 +468,9 @@
     "name": "Long conversation — Incident post-mortem with action items",
     "category": "long",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "mgr_10", "name": "Sameer Bose", "role": "engineering_manager"},
       {"externalId": "eng_28", "name": "Ananya Mishra", "role": "senior_engineer"},
@@ -462,6 +510,9 @@
     "name": "Long conversation — Sprint planning with estimation",
     "category": "long",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "mgr_11", "name": "Pallavi Mathur", "role": "engineering_manager"},
       {"externalId": "eng_31", "name": "Tarun Grover", "role": "tech_lead"},
@@ -497,6 +548,9 @@
     "name": "Short conversation — Quick standup update, single commitment",
     "category": "short",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "mgr_12", "name": "Yash Tandon", "role": "engineering_manager"},
       {"externalId": "eng_34", "name": "Shruti Menon", "role": "engineer"}
@@ -518,6 +572,9 @@
     "name": "Short conversation — Single blocker report",
     "category": "short",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "eng_35", "name": "Ravi Teja", "role": "engineer"},
       {"externalId": "eng_36", "name": "Ankita Goel", "role": "tech_lead"}
@@ -536,6 +593,9 @@
     "name": "Hinglish — Manager-engineer 1:1 with mixed Hindi-English",
     "category": "hinglish",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "mgr_13", "name": "Sanjay Mishra", "role": "engineering_manager"},
       {"externalId": "eng_37", "name": "Prateek Dubey", "role": "engineer"}
@@ -563,6 +623,9 @@
     "name": "Hinglish — Team discussion about deployment issues",
     "category": "hinglish",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "eng_38", "name": "Kunal Saxena", "role": "tech_lead"},
       {"externalId": "eng_39", "name": "Rashmi Pillai", "role": "engineer"},
@@ -591,6 +654,9 @@
     "name": "Edge case — Empty/whitespace text segments",
     "category": "edge_case",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "eng_41", "name": "Test User", "role": "engineer"}
     ],
@@ -608,6 +674,9 @@
     "name": "Edge case — Single-word segments with no context",
     "category": "edge_case",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "eng_42", "name": "Speaker One", "role": "engineer"},
       {"externalId": "eng_43", "name": "Speaker Two", "role": "engineer"}
@@ -628,6 +697,9 @@
     "name": "Decision-focused — Technical tradeoff discussion",
     "category": "decision",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "eng_44", "name": "Ajay Thakur", "role": "staff_engineer"},
       {"externalId": "eng_45", "name": "Smita Patil", "role": "senior_engineer"},
@@ -659,6 +731,9 @@
     "name": "All-types — Dense conversation hitting all 12 extraction types",
     "category": "all_types",
     "profile": "performance",
+    "annotation_method": "manual",
+    "annotated_by": "synthetic",
+    "annotation_date": "2026-03-18",
     "participants": [
       {"externalId": "mgr_14", "name": "Nandini Rao", "role": "engineering_manager"},
       {"externalId": "eng_47", "name": "Vivek Choudhary", "role": "senior_engineer"}
