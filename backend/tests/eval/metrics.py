@@ -150,12 +150,15 @@ def evaluate_conversation(
 def compute_metrics(
     gold_dataset: list[dict],
     all_results: dict[str, list[dict]],
+    matcher: Optional[MatcherProtocol] = None,
 ) -> OverallMetrics:
     """Compute aggregate metrics across all gold conversations.
 
     Args:
         gold_dataset: List of gold conversation entries.
         all_results: Dict mapping conversation ID to list of extraction dicts.
+        matcher: Optional matcher implementing MatcherProtocol. Passed through
+                 to evaluate_conversation. Defaults to KeywordMatcher().
 
     Returns:
         OverallMetrics with per-type and overall scores.
@@ -165,7 +168,7 @@ def compute_metrics(
     for gold in gold_dataset:
         conv_id = gold["id"]
         actual = all_results.get(conv_id, [])
-        conv_result = evaluate_conversation(gold, actual)
+        conv_result = evaluate_conversation(gold, actual, matcher=matcher)
         metrics.conversation_results.append(conv_result)
 
         # Aggregate per-type counts

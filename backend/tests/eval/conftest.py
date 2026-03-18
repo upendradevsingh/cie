@@ -11,6 +11,23 @@ EVAL_DIR = Path(__file__).parent
 PROFILES_DIR = str(Path(__file__).parent.parent.parent / "app" / "profiles")
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register --match-mode CLI option for eval tests."""
+    parser.addoption(
+        "--match-mode",
+        action="store",
+        default="keyword",
+        choices=("keyword", "embedding", "hybrid"),
+        help="Matching strategy for eval: keyword (default), embedding, or hybrid.",
+    )
+
+
+@pytest.fixture(scope="session")
+def match_mode(request: pytest.FixtureRequest) -> str:
+    """Return the --match-mode value chosen at invocation time."""
+    return request.config.getoption("--match-mode")
+
+
 @pytest.fixture(scope="session")
 def gold_dataset() -> list[dict[str, Any]]:
     """Load the gold annotated dataset."""
