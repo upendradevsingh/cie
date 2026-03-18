@@ -80,7 +80,7 @@ def process_conversation(self, conversation_id: str) -> dict:
         try:
             loader = ProfileLoader()
             profile = loader.load(conversation.profile_id)
-            engine = ExtractionEngine(profile)
+            engine = ExtractionEngine(profile, extraction_mode=profile.extraction_mode)
 
             import asyncio
             loop = asyncio.new_event_loop()

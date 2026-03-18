@@ -49,6 +49,7 @@ class ExtractionProfile(BaseModel):
     display_name: str
     description: str = ""
     llm: ProfileLLM = ProfileLLM()
+    extraction_mode: str = "single_pass"  # "single_pass" or "two_pass"
     extraction_types: dict[str, ExtractionTypeConfig] = {}
     summary: Optional[ProfileSummary] = None
 

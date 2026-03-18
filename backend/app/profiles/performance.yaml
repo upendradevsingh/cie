@@ -14,6 +14,8 @@ llm:
   max_tokens: 4096
   fallback_model: "gpt-4o"
 
+extraction_mode: "two_pass"
+
 extraction_types:
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
