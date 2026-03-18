@@ -4,6 +4,9 @@ on:
     branches: [main, dev]
   push:
     branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
 
 jobs:
   test:
@@ -51,3 +54,50 @@ jobs:
         with:
           file: backend/coverage.xml
           fail_ci_if_error: false
+
+  eval-fast:
+    needs: test
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-mock httpx
+      - name: Run fast eval tests
+        env:
+          JWT_SECRET: test-jwt-secret-for-ci-only
+          OPENAI_API_KEY: test-mock-openai-key
+          DEEPGRAM_API_KEY: test-mock-deepgram-key
+        run: |
+          cd backend
+          pytest tests/eval/test_extraction_parsing.py tests/eval/test_api_integration.py tests/eval/test_matching.py -m "fast" -v
+
+  eval-llm:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-mock httpx
+      - name: Run LLM eval tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          JWT_SECRET: test-jwt-secret-for-ci-only
+          DEEPGRAM_API_KEY: test-mock-deepgram-key
+        run: |
+          cd backend
+          pytest tests/eval/test_extraction_quality.py -m llm -v --match-mode=keyword
