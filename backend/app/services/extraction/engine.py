@@ -20,6 +20,10 @@ from app.services.extraction.prompts import (
     build_extraction_prompt,
     build_extraction_prompt_for_types,
 )
+from app.services.extraction.transcript_cleanup import (
+    CLEANUP_SYSTEM_PROMPT,
+    build_cleanup_prompt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,10 +73,48 @@ class ExtractionEngine:
         transcript: str,
         participants: list[dict[str, Any]],
     ) -> ExtractionResult:
-        """Run extraction pipeline: build prompt → call LLM → parse → filter."""
+        """Run extraction pipeline: cleanup → build prompt → call LLM → parse."""
+        # Pass 0: Clean up messy auto-transcribed text
+        clean_transcript = await self._cleanup_transcript(transcript, participants)
+
         if self.extraction_mode == "two_pass":
-            return await self._extract_two_pass(transcript, participants)
-        return await self._extract_single_pass(transcript, participants)
+            return await self._extract_two_pass(clean_transcript, participants)
+        return await self._extract_single_pass(clean_transcript, participants)
+
+    async def _cleanup_transcript(
+        self,
+        transcript: str,
+        participants: list[dict[str, Any]],
+    ) -> str:
+        """Pass 0: Clean up auto-transcribed text before extraction."""
+        # Skip cleanup for short/clean transcripts
+        if len(transcript) < 100:
+            return transcript
+
+        cleanup_prompt = build_cleanup_prompt(transcript, participants)
+
+        try:
+            client = openai.AsyncOpenAI(api_key=self._api_key)
+            response = await client.chat.completions.create(
+                model=self.model,
+                temperature=0.1,
+                max_tokens=self.max_tokens,
+                messages=[
+                    {"role": "system", "content": CLEANUP_SYSTEM_PROMPT},
+                    {"role": "user", "content": cleanup_prompt},
+                ],
+            )
+            clean = response.choices[0].message.content or transcript
+            cleanup_tokens = response.usage.total_tokens if response.usage else 0
+            self._last_tokens += cleanup_tokens
+            logger.info(
+                "Transcript cleanup: %d→%d chars, %d tokens",
+                len(transcript), len(clean), cleanup_tokens,
+            )
+            return clean
+        except Exception as e:
+            logger.warning("Transcript cleanup failed, using raw: %s", e)
+            return transcript
 
     async def _extract_single_pass(
         self,
