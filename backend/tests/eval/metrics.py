@@ -10,8 +10,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-
-KEYWORD_MATCH_THRESHOLD = 0.50  # At least 50% of keywords must match
+from tests.eval.matching.keyword_matcher import KeywordMatcher, MatcherProtocol
 
 
 @dataclass
@@ -91,75 +90,24 @@ class OverallMetrics:
         return 2 * p * r / (p + r) if (p + r) > 0 else 0.0
 
 
-def _keywords_match(description: str, keywords: list[str]) -> float:
-    """Check what fraction of keywords appear in the description (case-insensitive).
-
-    Returns a ratio between 0.0 and 1.0.
-    """
-    if not keywords:
-        return 1.0
-    desc_lower = description.lower()
-    matched = sum(1 for kw in keywords if kw.lower() in desc_lower)
-    return matched / len(keywords)
-
-
-def _fuzzy_match_extraction(
-    expected: dict,
-    actual_extractions: list[dict],
-    already_matched: set[int],
-) -> Optional[tuple[int, float]]:
-    """Find the best matching actual extraction for an expected one.
-
-    Uses extraction_type match + keyword fuzzy matching on description.
-    Returns (index, match_ratio) or None if no match found.
-    """
-    expected_type = expected["extraction_type"]
-    keywords = expected.get("description_contains", [])
-    min_confidence = expected.get("min_confidence", 0.0)
-
-    best_idx = None
-    best_ratio = 0.0
-
-    for idx, actual in enumerate(actual_extractions):
-        if idx in already_matched:
-            continue
-
-        # Type must match exactly
-        actual_type = actual.get("extraction_type", "").upper()
-        if actual_type != expected_type:
-            continue
-
-        # Check confidence meets minimum
-        actual_conf = actual.get("confidence", 0.0)
-        if actual_conf < min_confidence:
-            continue
-
-        # Fuzzy match on description keywords
-        actual_desc = actual.get("description", "")
-        ratio = _keywords_match(actual_desc, keywords)
-
-        if ratio >= KEYWORD_MATCH_THRESHOLD and ratio > best_ratio:
-            best_ratio = ratio
-            best_idx = idx
-
-    if best_idx is not None:
-        return (best_idx, best_ratio)
-    return None
-
-
 def evaluate_conversation(
     gold: dict,
     actual_extractions: list[dict],
+    matcher: Optional[MatcherProtocol] = None,
 ) -> ConversationEvalResult:
     """Evaluate extraction results against gold standard for one conversation.
 
     Args:
         gold: Gold dataset entry with expected_extractions and expected_absent.
         actual_extractions: List of extraction dicts from the engine.
+        matcher: Optional matcher implementing MatcherProtocol. Defaults to KeywordMatcher().
 
     Returns:
         ConversationEvalResult with TP/FP/FN details.
     """
+    if matcher is None:
+        matcher = KeywordMatcher()
+
     result = ConversationEvalResult(conversation_id=gold["id"])
     expected_list = gold.get("expected_extractions", [])
     expected_absent = set(gold.get("expected_absent", []))
@@ -168,7 +116,7 @@ def evaluate_conversation(
 
     # Match each expected extraction against actuals
     for expected in expected_list:
-        match = _fuzzy_match_extraction(expected, actual_extractions, already_matched)
+        match = matcher.match(expected, actual_extractions, already_matched)
         if match is not None:
             idx, ratio = match
             already_matched.add(idx)
