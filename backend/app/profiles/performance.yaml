@@ -173,6 +173,108 @@ extraction_types:
         required: false
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # PROJECT MANAGEMENT INTELLIGENCE
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  FOLLOW_UP:
+    enabled: true
+    confidence_threshold: 0.70
+    description: "A follow-up meeting, discussion, or review scheduled or proposed"
+    prompt_hint: >
+      Look for any planned next interaction:
+      - Scheduled meetings: "Let's meet next week", "Thursday Friday", "Mumbai trip"
+      - Review cadences: "Design review next week", "We'll revisit Wednesday"
+      - Async follow-ups: "Send notes", "Drop a message", "Loop me in"
+      - Recurring: "Sprint review", "Weekly sync", "Quarterly review"
+      ALWAYS capture WHO, WHEN, WHERE, and WHAT will be discussed.
+    attributes:
+      - name: who
+        type: string
+      - name: when
+        type: string
+      - name: where
+        type: string
+        required: false
+      - name: topic
+        type: string
+        required: false
+      - name: follow_up_type
+        type: enum
+        values: [meeting, review, async_discussion, escalation]
+
+  RISK:
+    enabled: true
+    confidence_threshold: 0.70
+    description: "A risk to project, team, or delivery that was raised or discussed"
+    prompt_hint: >
+      Look for threats to delivery, team stability, or quality:
+      - People risk: "Person X put papers", "attrition", "key person leaving",
+        "single point of failure", "bus factor"
+      - Delivery risk: "Tight timeline", "scope creep", "dependencies unclear"
+      - Technical risk: "Architecture won't scale", "tech debt", "security gap"
+      - Resource risk: "Not enough people", "budget cut", "capacity constraints"
+      - Quality risk: "No tests", "production issues", "reliability concerns"
+      Distinguish from BLOCKER (already preventing work) — RISK is something
+      that COULD go wrong but hasn't yet.
+    attributes:
+      - name: risk_type
+        type: enum
+        values: [people, delivery, technical, resource, quality]
+      - name: severity
+        type: enum
+        values: [low, medium, high, critical]
+      - name: mitigation_discussed
+        type: boolean
+        required: false
+
+  METRIC_TARGET:
+    enabled: true
+    confidence_threshold: 0.70
+    description: "A quantitative target, KPI, or SLO proposed or discussed"
+    prompt_hint: >
+      Look for any numeric targets being set or proposed:
+      - SLOs: "99% to 99.5% reliability", "P99 latency under 200ms"
+      - KPIs: "Reduce churn by 15%", "3x growth target"
+      - Budgets: "64 lakh budget", "7 crore revised"
+      - Capacity: "4550 headcount plan", "10-20% reserved for engineering"
+      - Timelines: "Ship in 2 weeks", "Q1 delivery"
+      Capture the CURRENT value (if mentioned), TARGET value, and the metric name.
+      These are distinct from GOAL_UPDATE (which tracks progress on existing goals).
+      METRIC_TARGET is about SETTING new targets.
+    attributes:
+      - name: metric_name
+        type: string
+      - name: current_value
+        type: string
+        required: false
+      - name: target_value
+        type: string
+      - name: timeframe
+        type: string
+        required: false
+
+  RECOMMENDATION:
+    enabled: true
+    confidence_threshold: 0.70
+    description: "Advice, suggestion, or best practice shared from experience"
+    prompt_hint: >
+      Look for wisdom/advice being shared — NOT commitments or decisions:
+      - Experience-based advice: "I've learned that...", "What I've seen is..."
+      - Best practices: "You should reserve 10-20% capacity", "Always have a buffer"
+      - Strategic suggestions: "Consider build vs buy", "Think about phased approach"
+      - Industry patterns: "Most companies do X", "Best teams I've worked with..."
+      Distinct from COACHING_MOMENT (which is personal growth focused).
+      RECOMMENDATION is about project/org strategy and operational wisdom.
+    attributes:
+      - name: advisor
+        type: string
+      - name: topic
+        type: string
+      - name: actionability
+        type: enum
+        values: [immediately_actionable, needs_discussion, long_term]
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # GOAL & PROGRESS INTELLIGENCE
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
