@@ -67,6 +67,7 @@ class ExtractionEngine:
         # Create client lazily per call — AsyncOpenAI binds to event loop on first use
         self._api_key = settings.OPENAI_API_KEY
         self._last_tokens = 0
+        self._parallel_tokens: dict[str, int] = {}  # per-label token tracking for parallel calls
 
     async def extract(
         self,
@@ -162,45 +163,47 @@ class ExtractionEngine:
         transcript: str,
         participants: list[dict[str, Any]],
     ) -> ExtractionResult:
-        """Two-pass extraction: content pass + behavioral pass, merged."""
+        """Two-pass extraction: content + behavioral in PARALLEL, then merged."""
+        import asyncio
         start_ms = int(time.time() * 1000)
-        total_tokens = 0
 
-        # Pass 1 — Content extraction (what was said)
+        # Build both prompts
         content_prompt = build_extraction_prompt_for_types(
             self.profile, transcript, participants, type_filter=CONTENT_TYPES,
         )
-        try:
-            content_raw = await self._call_llm(content_prompt, label="pass1_content")
-        except Exception as e:
-            logger.error("Content pass LLM extraction failed: %s", e)
-            raise
-        content_extractions = self._parse_extractions(content_raw)
-        total_tokens += self._last_tokens
-        summary = content_raw.get("summary", "")
-
-        # Pass 2 — Behavioral extraction (how it was said)
         behavioral_prompt = build_extraction_prompt_for_types(
             self.profile, transcript, participants, type_filter=BEHAVIORAL_TYPES,
         )
+
+        # Run Pass 1 and Pass 2 in parallel — they're independent
+        content_task = self._call_llm(content_prompt, label="pass1_content")
+        behavioral_task = self._call_llm(
+            behavioral_prompt, system_prompt=BEHAVIORAL_SYSTEM_PROMPT,
+            label="pass2_behavioral",
+        )
+
         try:
-            behavioral_raw = await self._call_llm(
-                behavioral_prompt, system_prompt=BEHAVIORAL_SYSTEM_PROMPT,
-                label="pass2_behavioral",
+            content_raw, behavioral_raw = await asyncio.gather(
+                content_task, behavioral_task,
             )
         except Exception as e:
-            logger.error("Behavioral pass LLM extraction failed: %s", e)
+            logger.error("Parallel extraction failed: %s", e)
             raise
-        behavioral_extractions = self._parse_extractions(behavioral_raw)
-        total_tokens += self._last_tokens
 
-        # Merge both passes
+        content_extractions = self._parse_extractions(content_raw)
+        behavioral_extractions = self._parse_extractions(behavioral_raw)
+        summary = content_raw.get("summary", "")
+
+        # Merge both passes — token count from _last_tokens is unreliable
+        # in parallel, so sum from response usage tracked per-call
         all_extractions = content_extractions + behavioral_extractions
+        total_tokens = self._parallel_tokens.get("pass1_content", 0) + \
+                       self._parallel_tokens.get("pass2_behavioral", 0)
         self._last_tokens = total_tokens
         duration_ms = int(time.time() * 1000) - start_ms
 
         logger.info(
-            "Extraction complete (two_pass): profile=%s content=%d behavioral=%d total=%d tokens=%d ms=%d",
+            "Extraction complete (two_pass_parallel): profile=%s content=%d behavioral=%d total=%d tokens=%d ms=%d",
             self.profile.profile_id,
             len(content_extractions),
             len(behavioral_extractions),
@@ -254,6 +257,7 @@ class ExtractionEngine:
         output_tokens = response.usage.completion_tokens if response.usage else 0
         content = response.choices[0].message.content or "{}"
 
+        self._parallel_tokens[label] = self._last_tokens
         logger.info(
             "OpenAI %s: model=%s latency=%dms tokens(in=%d out=%d total=%d) prompt_words≈%d",
             label, self.model, call_ms, input_tokens, output_tokens,
