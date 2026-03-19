@@ -94,6 +94,7 @@ class ExtractionEngine:
         cleanup_prompt = build_cleanup_prompt(transcript, participants)
 
         try:
+            cleanup_start = time.time()
             client = openai.AsyncOpenAI(api_key=self._api_key)
             response = await client.chat.completions.create(
                 model=self.model,
@@ -104,12 +105,16 @@ class ExtractionEngine:
                     {"role": "user", "content": cleanup_prompt},
                 ],
             )
+            cleanup_ms = int((time.time() - cleanup_start) * 1000)
             clean = response.choices[0].message.content or transcript
             cleanup_tokens = response.usage.total_tokens if response.usage else 0
+            input_tokens = response.usage.prompt_tokens if response.usage else 0
+            output_tokens = response.usage.completion_tokens if response.usage else 0
             self._last_tokens += cleanup_tokens
             logger.info(
-                "Transcript cleanup: %d→%d chars, %d tokens",
-                len(transcript), len(clean), cleanup_tokens,
+                "OpenAI pass0_cleanup: model=%s latency=%dms tokens(in=%d out=%d total=%d) chars(%d→%d)",
+                self.model, cleanup_ms, input_tokens, output_tokens,
+                cleanup_tokens, len(transcript), len(clean),
             )
             return clean
         except Exception as e:
@@ -127,7 +132,7 @@ class ExtractionEngine:
         prompt = build_extraction_prompt(self.profile, transcript, participants)
 
         try:
-            raw_json = await self._call_llm(prompt)
+            raw_json = await self._call_llm(prompt, label="single_pass")
         except Exception as e:
             logger.error("LLM extraction failed: %s", e)
             raise
@@ -166,7 +171,7 @@ class ExtractionEngine:
             self.profile, transcript, participants, type_filter=CONTENT_TYPES,
         )
         try:
-            content_raw = await self._call_llm(content_prompt)
+            content_raw = await self._call_llm(content_prompt, label="pass1_content")
         except Exception as e:
             logger.error("Content pass LLM extraction failed: %s", e)
             raise
@@ -181,6 +186,7 @@ class ExtractionEngine:
         try:
             behavioral_raw = await self._call_llm(
                 behavioral_prompt, system_prompt=BEHAVIORAL_SYSTEM_PROMPT,
+                label="pass2_behavioral",
             )
         except Exception as e:
             logger.error("Behavioral pass LLM extraction failed: %s", e)
@@ -218,8 +224,10 @@ class ExtractionEngine:
     )
     async def _call_llm(
         self, prompt: str, system_prompt: str | None = None,
+        label: str = "llm_call",
     ) -> dict:
         """Call OpenAI with retry logic. Returns parsed JSON dict."""
+        call_start = time.time()
         create_kwargs = dict(
             model=self.model,
             max_tokens=self.max_tokens,
@@ -227,6 +235,7 @@ class ExtractionEngine:
         )
 
         sys_prompt = system_prompt if system_prompt is not None else SYSTEM_PROMPT
+        prompt_tokens = len(prompt.split()) + len(sys_prompt.split())  # rough estimate
 
         # Fresh client per call to avoid stale event loop binding in Celery workers
         client = openai.AsyncOpenAI(api_key=self._api_key)
@@ -239,8 +248,17 @@ class ExtractionEngine:
             response_format={"type": "json_object"},
         )
 
+        call_ms = int((time.time() - call_start) * 1000)
         self._last_tokens = response.usage.total_tokens if response.usage else 0
+        input_tokens = response.usage.prompt_tokens if response.usage else 0
+        output_tokens = response.usage.completion_tokens if response.usage else 0
         content = response.choices[0].message.content or "{}"
+
+        logger.info(
+            "OpenAI %s: model=%s latency=%dms tokens(in=%d out=%d total=%d) prompt_words≈%d",
+            label, self.model, call_ms, input_tokens, output_tokens,
+            self._last_tokens, prompt_tokens,
+        )
 
         try:
             return json.loads(content)
