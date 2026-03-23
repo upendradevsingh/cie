@@ -47,3 +47,46 @@ class CorrectionResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class CorrectionDetailResponse(BaseModel):
+    id: uuid.UUID
+    extraction_id: uuid.UUID
+    field_name: str
+    original_value: Optional[str] = None
+    corrected_value: Optional[str] = None
+    correction_note: Optional[str] = None
+    correction_type: str
+    attributes_delta: Optional[dict] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ReviewQueueItem(BaseModel):
+    id: uuid.UUID
+    conversation_id: uuid.UUID
+    extraction_type: str
+    description: str
+    confidence: float
+    attributed_to: Optional[dict] = None
+    evidence: Optional[str] = None
+    attributes: dict[str, Any]
+    corrected: bool
+    created_at: datetime
+    review_priority: float
+
+    model_config = {"from_attributes": True}
+
+
+class TypeCorrectionStats(BaseModel):
+    total_extractions: int
+    corrected_count: int
+    correction_rate: float
+    trend: str  # "improving", "degrading", "stable"
+
+
+class CorrectionAnalyticsResponse(BaseModel):
+    by_type: dict[str, TypeCorrectionStats]
+    overall: TypeCorrectionStats
+    period_days: int

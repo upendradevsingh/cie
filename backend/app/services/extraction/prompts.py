@@ -18,7 +18,7 @@ Rules:
 """
 
 EXTRACTION_PROMPT_TEMPLATE = """# Profile: {profile_name}
-
+{meeting_context}
 ## Participants
 {participants_json}
 
@@ -52,9 +52,14 @@ def build_extraction_prompt(
     profile: ExtractionProfile,
     transcript: str,
     participants: list[dict[str, Any]],
+    meeting_type: str | None = None,
+    correction_examples: dict[str, str] | None = None,
 ) -> str:
     """Build a dynamic extraction prompt from a profile configuration (all types)."""
-    return build_extraction_prompt_for_types(profile, transcript, participants)
+    return build_extraction_prompt_for_types(
+        profile, transcript, participants, meeting_type=meeting_type,
+        correction_examples=correction_examples,
+    )
 
 
 def build_extraction_prompt_for_types(
@@ -62,6 +67,8 @@ def build_extraction_prompt_for_types(
     transcript: str,
     participants: list[dict[str, Any]],
     type_filter: set[str] | None = None,
+    meeting_type: str | None = None,
+    correction_examples: dict[str, str] | None = None,
 ) -> str:
     """Build a dynamic extraction prompt, optionally filtered to specific types.
 
@@ -71,6 +78,8 @@ def build_extraction_prompt_for_types(
         participants: List of participant dicts.
         type_filter: If provided, only include extraction types in this set.
                      If None, include all enabled types.
+        meeting_type: Optional meeting type for context-aware extraction.
+        correction_examples: Optional dict of extraction_type -> few-shot correction text.
     """
     sections = []
     for ext_type, config in profile.enabled_types().items():
@@ -98,6 +107,10 @@ Confidence threshold: {config.confidence_threshold} (only extract if confidence 
         if attr_descriptions:
             section += f"\nAttributes:\n" + "\n".join(attr_descriptions)
 
+        # Append few-shot correction examples if available for this type
+        if correction_examples and ext_type in correction_examples:
+            section += f"\n\n{correction_examples[ext_type]}"
+
         sections.append(section)
 
     summary_style = "concise"
@@ -106,8 +119,13 @@ Confidence threshold: {config.confidence_threshold} (only extract if confidence 
         summary_style = profile.summary.style
         summary_max_length = profile.summary.max_length
 
+    from app.services.extraction.meeting_types import get_meeting_config
+    config = get_meeting_config(meeting_type)
+    meeting_context = "\n" + config.extraction_preamble if config.extraction_preamble else ""
+
     return EXTRACTION_PROMPT_TEMPLATE.format(
         profile_name=profile.display_name,
+        meeting_context=meeting_context,
         participants_json=json.dumps(participants, indent=2),
         extraction_sections="\n\n".join(sections),
         transcript=transcript,

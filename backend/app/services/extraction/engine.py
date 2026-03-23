@@ -73,14 +73,60 @@ class ExtractionEngine:
         self,
         transcript: str,
         participants: list[dict[str, Any]],
+        segments: list[dict[str, Any]] | None = None,
+        meeting_type: str | None = None,
+        db=None,
+        tenant_id=None,
     ) -> ExtractionResult:
         """Run extraction pipeline: cleanup → build prompt → call LLM → parse."""
+        self._meeting_type = meeting_type
+        self._db = db
+        self._tenant_id = tenant_id
+
+        # Build speaker-tagged transcript from segments if available
+        # This preserves ASR speaker attribution through the cleanup pass
+        if segments:
+            tagged_transcript = self._build_speaker_tagged_transcript(segments)
+        else:
+            tagged_transcript = transcript
+
         # Pass 0: Clean up messy auto-transcribed text
-        clean_transcript = await self._cleanup_transcript(transcript, participants)
+        clean_transcript = await self._cleanup_transcript(tagged_transcript, participants)
 
         if self.extraction_mode == "two_pass":
             return await self._extract_two_pass(clean_transcript, participants)
         return await self._extract_single_pass(clean_transcript, participants)
+
+    @staticmethod
+    def _build_speaker_tagged_transcript(segments: list[dict[str, Any]]) -> str:
+        """Build a speaker-tagged transcript from segments.
+
+        Merges consecutive segments from the same speaker into one line.
+        Output format: "Speaker Name: text\nOther Speaker: text\n..."
+        """
+        lines: list[str] = []
+        current_speaker: str | None = None
+        current_texts: list[str] = []
+
+        for seg in segments:
+            speaker = seg.get("speaker", "Unknown")
+            text = seg.get("text", "").strip()
+            if not text:
+                continue
+
+            if speaker == current_speaker:
+                current_texts.append(text)
+            else:
+                if current_speaker and current_texts:
+                    lines.append(f"{current_speaker}: {' '.join(current_texts)}")
+                current_speaker = speaker
+                current_texts = [text]
+
+        # Flush last speaker
+        if current_speaker and current_texts:
+            lines.append(f"{current_speaker}: {' '.join(current_texts)}")
+
+        return "\n".join(lines)
 
     async def _cleanup_transcript(
         self,
@@ -92,7 +138,9 @@ class ExtractionEngine:
         if len(transcript) < 100:
             return transcript
 
-        cleanup_prompt = build_cleanup_prompt(transcript, participants)
+        cleanup_prompt = build_cleanup_prompt(
+            transcript, participants, meeting_type=self._meeting_type,
+        )
 
         try:
             cleanup_start = time.time()
@@ -122,6 +170,19 @@ class ExtractionEngine:
             logger.warning("Transcript cleanup failed, using raw: %s", e)
             return transcript
 
+    def _get_correction_examples(self, extraction_types: set[str]) -> dict[str, str]:
+        """Query correction feedback if DB session is available."""
+        if not self._db or not self._tenant_id:
+            return {}
+        try:
+            from app.services.extraction.correction_feedback import get_correction_examples
+            return get_correction_examples(
+                self._db, self._tenant_id, self.profile.profile_id, extraction_types,
+            )
+        except Exception as e:
+            logger.warning("Failed to load correction feedback: %s", e)
+            return {}
+
     async def _extract_single_pass(
         self,
         transcript: str,
@@ -130,7 +191,13 @@ class ExtractionEngine:
         """Single-pass extraction: one LLM call with all types."""
         start_ms = int(time.time() * 1000)
 
-        prompt = build_extraction_prompt(self.profile, transcript, participants)
+        all_types = set(self.profile.enabled_types().keys())
+        corrections = self._get_correction_examples(all_types)
+
+        prompt = build_extraction_prompt(
+            self.profile, transcript, participants, meeting_type=self._meeting_type,
+            correction_examples=corrections,
+        )
 
         try:
             raw_json = await self._call_llm(prompt, label="single_pass")
@@ -167,12 +234,18 @@ class ExtractionEngine:
         import asyncio
         start_ms = int(time.time() * 1000)
 
+        # Query correction feedback for both passes
+        content_corrections = self._get_correction_examples(CONTENT_TYPES)
+        behavioral_corrections = self._get_correction_examples(BEHAVIORAL_TYPES)
+
         # Build both prompts
         content_prompt = build_extraction_prompt_for_types(
             self.profile, transcript, participants, type_filter=CONTENT_TYPES,
+            meeting_type=self._meeting_type, correction_examples=content_corrections,
         )
         behavioral_prompt = build_extraction_prompt_for_types(
             self.profile, transcript, participants, type_filter=BEHAVIORAL_TYPES,
+            meeting_type=self._meeting_type, correction_examples=behavioral_corrections,
         )
 
         # Run Pass 1 and Pass 2 in parallel — they're independent
@@ -263,7 +336,6 @@ class ExtractionEngine:
             label, self.model, call_ms, input_tokens, output_tokens,
             self._last_tokens, prompt_tokens,
         )
-
         try:
             return json.loads(content)
         except json.JSONDecodeError as e:
