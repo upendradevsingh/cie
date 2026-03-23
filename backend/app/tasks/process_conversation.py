@@ -82,12 +82,24 @@ def process_conversation(self, conversation_id: str) -> dict:
             profile = loader.load(conversation.profile_id)
             engine = ExtractionEngine(profile, extraction_mode=profile.extraction_mode)
 
+            # Extract meeting_type from source_metadata if provided
+            meeting_type = None
+            if conversation.source_metadata:
+                meeting_type = conversation.source_metadata.get("meeting_type")
+
             import asyncio
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
                 result = loop.run_until_complete(
-                    engine.extract(transcript, conversation.participants or [])
+                    engine.extract(
+                        transcript,
+                        conversation.participants or [],
+                        segments=conversation.transcript_segments,
+                        meeting_type=meeting_type,
+                        db=db,
+                        tenant_id=conversation.tenant_id,
+                    )
                 )
             finally:
                 loop.close()
